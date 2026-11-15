@@ -1,0 +1,78 @@
+name: Patch Validator
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e .
+      - run: python -m unittest discover -s tests -v
+      - name: Build Linux x86_64 validator
+        run: docker build --platform linux/amd64 -t patch-validator -f docker/Dockerfile .
+      - name: Check demo container verdicts
+        shell: bash
+        run: |
+          for scenario in correct:0 incomplete:10 regression:20; do
+            variant=${scenario%:*}
+            expected=${scenario#*:}
+            mkdir -p "reports/demo_$variant"
+            set +e
+            docker run --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
+              --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
+              --user "$(id -u):$(id -g)" \
+              -v "$PWD/reports/demo_$variant:/workspace/reports:rw" \
+              patch-validator --config ".demo/$variant.yaml" -o /workspace/reports
+            status=$?
+            set -e
+            test "$status" -eq "$expected" || { echo "$variant: $status (expected $expected)"; exit 1; }
+          done
+      - name: Check target verdicts and hardening evidence
+        shell: bash
+        run: |
+          for scenario in cjson_correct:0 cjson_incomplete:10 cjson_regression:20 \
+                          tlv_correct:0 tlv_incomplete:10 tlv_regression:20 tlv_hardening_warn:0; do
+            variant=${scenario%:*}
+            expected=${scenario#*:}
+            mkdir -p "reports/$variant"
+            set +e
+            docker run --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
+              --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
+              --user "$(id -u):$(id -g)" \
+              -v "$PWD/reports/$variant:/workspace/reports:rw" \
+              patch-validator --config "configs/$variant.yaml" -o /workspace/reports
+            status=$?
+            set -e
+            test "$status" -eq "$expected" || { echo "$variant: $status (expected $expected)"; exit 1; }
+            extra=()
+            if [ "$variant" = tlv_hardening_warn ]; then extra+=(--expect-hardening-warning); fi
+            python ci/check_reports.py report "reports/$variant" --expected-exit "$expected" "${extra[@]}"
+          done
+      - name: Replay bundles and reload generated regression cases
+        shell: bash
+        run: |
+          for variant in cjson_correct tlv_correct; do
+            docker run --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
+              --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
+              --user "$(id -u):$(id -g)" \
+              -v "$PWD/reports/$variant:/workspace/reports:rw" \
+              --entrypoint python patch-validator ci/check_reports.py replay /workspace/reports
+            docker run --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
+              --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
+              --user "$(id -u):$(id -g)" \
+              -v "$PWD/reports/$variant:/workspace/reports:rw" \
+              patch-validator --config "configs/$variant.yaml" -o /workspace/reports
+            python ci/check_reports.py report "reports/$variant" --expected-exit 0 --regression-loaded
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-reports
+          path: reports/
+          if-no-files-found: warn
