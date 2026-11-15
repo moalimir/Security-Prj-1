@@ -34,7 +34,14 @@ class DiffAnalyzer:
     @staticmethod
     def correlate(frames, report: dict, side: str, source_dir: Path) -> dict:
         matches = []
+        primary, previous = True, -1
         for frame in frames:
+            # Allocation/free traces restart numbering; do not call them crash frames.
+            if frame.frame_id <= previous:
+                primary = False
+            previous = frame.frame_id
+            role = ("crash" if frame.frame_id == 0 else "caller") if primary else "auxiliary"
+            frame_evidence = {"frame_id": frame.frame_id, "frame_role": role}
             path = Path(frame.file_path)
             if path.is_absolute():
                 try:
@@ -47,10 +54,10 @@ class DiffAnalyzer:
                 for hunk in file["hunks"]:
                     if frame.line_number in hunk[f"{side}_lines"]:
                         matches.append({"status": "changed_line", "file": str(path),
-                                        "line": frame.line_number, "function": frame.function_name})
+                                        "line": frame.line_number, "function": frame.function_name, **frame_evidence})
                     elif re.search(r"\b" + re.escape(frame.function_name) + r"\s*\(", hunk["context"]):
                         matches.append({"status": "same_function", "file": str(path),
-                                        "line": frame.line_number, "function": frame.function_name})
+                                        "line": frame.line_number, "function": frame.function_name, **frame_evidence})
         status = "changed_line" if any(m["status"] == "changed_line" for m in matches) else "same_function" if matches else "unknown"
         return {"status": status, "evidence": matches,
                 "limitation": "Runtime location overlap is evidence of association, not proof of causation; caller effects may be unknown."}

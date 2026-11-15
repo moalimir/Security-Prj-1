@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.core.build_engine import BuildEngine
 from src.core.config_manager import BuildConfig, ExecConfig, ProjectConfig, TestConfig
-from src.core.test_runner import TestRunner
+from src.core.test_runner import StackFrame, TestRunner
 
 
 def git(repo, *args):
@@ -75,6 +75,36 @@ class BuildTests(unittest.TestCase):
             result = HardeningChecker().check(path)
             self.assertEqual(result["status"], "unsupported")
             self.assertIsNone(result["nx"])
+
+    def test_correlation_preserves_crash_and_caller_frame_roles(self):
+        from src.modules.diff_analyzer import DiffAnalyzer
+        root = Path("/fixture")
+        diff = {"files": [{"base_path": "parser.c", "patched_path": "parser.c", "hunks": [
+            {"context": "int parse_object(int n)", "base_lines": [8], "patched_lines": [9]}]}]}
+        frames = [StackFrame(0, "parse_string", str(root / "parser.c"), 3, "0x123"),
+                  StackFrame(1, "parse_object", str(root / "parser.c"), 12, "0x456")]
+        for side in ("base", "patched"):
+            with self.subTest(side=side):
+                correlation = DiffAnalyzer.correlate(frames, diff, side, root)
+                self.assertEqual(correlation["status"], "same_function")
+                evidence, = correlation["evidence"]
+                self.assertEqual((evidence["frame_id"], evidence["frame_role"]), (1, "caller"))
+                self.assertEqual(evidence["function"], "parse_object")
+        frames[0] = StackFrame(0, "parse_string", str(root / "parser.c"), 9, "0x123")
+        evidence = DiffAnalyzer.correlate(frames, diff, "patched", root)["evidence"][0]
+        self.assertEqual(evidence["status"], "changed_line")
+        self.assertEqual((evidence["frame_id"], evidence["frame_role"]), (0, "crash"))
+        # An unsymbolized/missing #0 must not turn a caller into the crash frame.
+        evidence = DiffAnalyzer.correlate(frames[1:], diff, "base", root)["evidence"][0]
+        self.assertEqual(evidence["frame_role"], "caller")
+        frames[1] = StackFrame(1, "unrelated", str(root / "parser.c"), 12, "0x456")
+        self.assertEqual(DiffAnalyzer.correlate(frames[1:], diff, "base", root)["status"], "unknown")
+        # ASan can append allocation/free stacks with frame numbers starting over.
+        frames = [StackFrame(0, "parse_string", "parser.c", 3, "0x123"),
+                  StackFrame(1, "parse_object", "parser.c", 12, "0x456"),
+                  StackFrame(0, "parse_object", "parser.c", 12, "0x789")]
+        evidence = DiffAnalyzer.correlate(frames, diff, "base", root)["evidence"]
+        self.assertEqual([e["frame_role"] for e in evidence], ["caller", "auxiliary"])
 
     def test_elf_headers_provide_hardening_evidence(self):
         import struct
