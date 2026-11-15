@@ -63,3 +63,41 @@ def determine_exit_code(findings: list[Finding]) -> int:
     if not findings or "Inconclusive" in categories:
         return 40
     return 0
+
+
+def aggregate_statuses(cases: list[dict], findings: list[Finding], runs: dict) -> dict:
+    """Keep confirmed failures and require complete evidence for each pass."""
+    categories = {f.category for f in findings} | {
+        comparison["category"] for f in findings for comparison in f.comparisons.values()}
+    security_failed = bool(categories & {"IncompleteFix", "NewIssue"})
+    functionality_failed = "FunctionalRegression" in categories
+    security_known = any(case["category"] == "exploit" for case in cases)
+    functionality_known = any(case["category"] != "exploit" for case in cases)
+    by_name = {f.test_name: f for f in findings}
+    for case in cases:
+        name = case["name"]
+        functional = case["category"] != "exploit"
+        finding = by_name.get(name)
+        if not functional and (finding is None or finding.category != "Fixed"):
+            security_known = False
+        for mode in ("release", "sanitized"):
+            base = runs.get(f"base_{mode}", {}).get(name, [])
+            patched = runs.get(f"patched_{mode}", {}).get(name, [])
+            comparison = finding.comparisons.get(mode, {}) if finding else {}
+            if (not base or not patched or not comparison.get("stable", False)
+                    or any(r.timed_out or r.resource_limited
+                           or (r.crashed and r.detection_mechanism == "signal") for r in (*base, *patched))):
+                security_known = False
+                if functional:
+                    functionality_known = False
+                continue
+            if patched[0].crashed:
+                security_known = False
+            if functional:
+                patched_correct = matches_oracle(patched[0], case)
+                functionality_failed |= matches_oracle(base[0], case) and not patched_correct
+                functionality_known &= patched_correct
+    return {
+        "security_status": "fail" if security_failed else "pass" if security_known else "inconclusive",
+        "functionality_status": "fail" if functionality_failed else "pass" if functionality_known else "inconclusive",
+    }

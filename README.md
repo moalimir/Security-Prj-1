@@ -269,6 +269,24 @@ instrumented section includes error type, detection mechanism, and symbolized
 stack frames. Missing evidence, timeouts, and resource failures remain explicit.
 HTML uses scrollable tables and escaped output; complete JSON evidence is retained.
 
+Every validator JSON report includes three independent aggregate fields, including
+reports saved after configuration, build, or analysis failures:
+
+| Field | Values and meaning |
+| --- | --- |
+| `security_status` | `fail` if a remaining or new security error is confirmed; `pass` if all configured exploit cases are fixed and stable comparisons leave no unresolved security evidence; otherwise `inconclusive`. |
+| `functionality_status` | `fail` if a stable valid, boundary, or invalid case meets its baseline oracle but violates it after patching; `pass` if all those cases meet their patched oracle in both modes; otherwise `inconclusive`. |
+| `analysis_complete` | Boolean indicating that required pipeline stages and checks completed. It starts as `false` and remains false after failures or skipped/unsupported required checks. |
+
+These fields are computed from findings and execution evidence, independently of
+exit-code priority. A security error on a previously correct functional input can
+fail both statuses. An incomplete analysis preserves confirmed failures but cannot
+claim a pass for unexamined cases. Timeouts, resource failures, unclassified
+signals, and unstable comparisons leave affected conclusions inconclusive unless
+other evidence already confirms a failure. Completed execution can still yield an
+`inconclusive` judgment, such as when the expected baseline error is not reproduced.
+All conclusions apply within the configured tests and build settings.
+
 `--output-dir` contains:
 
 ```text

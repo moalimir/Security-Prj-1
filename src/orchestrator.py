@@ -18,7 +18,7 @@ from src.core.build_engine import BuildEngine
 from src.core.config_manager import ConfigManager
 from src.core.oracle import load_oracle
 from src.core.test_runner import TestResult, TestRunner
-from src.modules.classifier import Finding, FindingCategory, classify, determine_exit_code, matches_oracle
+from src.modules.classifier import Finding, FindingCategory, aggregate_statuses, classify, determine_exit_code, matches_oracle
 from src.modules.diff_analyzer import DiffAnalyzer
 from src.modules.hardening_checker import HardeningChecker
 from src.modules.report_generator import ReportGenerator, write_json
@@ -47,8 +47,12 @@ class PatchValidator:
 
     def run(self) -> int:
         self.findings = []
+        self.cases = []
+        self.runs = {}
         self.analysis_incomplete = False
         self.report = {"schema_version": 1, "project": "unresolved", "exit_code": 40,
+                       "security_status": "inconclusive", "functionality_status": "inconclusive",
+                       "analysis_complete": False,
                        "started_at": datetime.now(timezone.utc).isoformat(),
                        "warnings": [], "errors": [], "findings": self.findings,
                        "builds": {}, "results": {}, "hardening": {}, "diff": {}}
@@ -63,11 +67,20 @@ class PatchValidator:
             logger.exception("Pipeline could not complete")
             self.report["errors"].append(f"{type(exc).__name__}: {exc}")
             self.report["exit_code"] = 30
+        self.report.update(aggregate_statuses(self.cases, self.findings, self.runs))
+        if self.report["errors"]:
+            self.report["analysis_complete"] = False
         self.report["finished_at"] = datetime.now(timezone.utc).isoformat()
         try:
             ReportGenerator(self.workspace).generate(self.report)
-        except OSError:
+        except OSError as exc:
+            self.report.update(exit_code=30, analysis_complete=False)
+            self.report["errors"].append(f"Cannot write reports: {exc}")
             logger.exception("Cannot write reports to %s", self.workspace)
+            try:
+                write_json(self.workspace / "report.json", self.report)
+            except OSError:
+                pass
             return 30
         logger.info("Verdict: %s; reports: %s", self.report["exit_code"], self.workspace)
         return self.report["exit_code"]

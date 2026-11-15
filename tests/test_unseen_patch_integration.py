@@ -79,6 +79,9 @@ class UnseenPatchIntegrationTests(unittest.TestCase):
         self.assertEqual(proc.returncode, expected_exit, proc.stdout + proc.stderr)
         report = json.loads((self.output / "report.json").read_text())
         self.assertEqual(report["exit_code"], expected_exit)
+        self.assertIn(report["security_status"], ("pass", "fail", "inconclusive"))
+        self.assertIn(report["functionality_status"], ("pass", "fail", "inconclusive"))
+        self.assertIsInstance(report["analysis_complete"], bool)
         metadata = json.loads((self.output / "unseen/metadata.json").read_text())
         self.assertEqual(metadata["validator_exit_code"], expected_exit)
         self.assertEqual(metadata["base_commit"], self.base)
@@ -106,6 +109,7 @@ class UnseenPatchIntegrationTests(unittest.TestCase):
         expected = 0 if sys.platform.startswith("linux") else 40
         report = self.evaluate(self.fixed, expected)
         self.assertEqual({f["category"] for f in report["findings"]}, {"Fixed"})
+        self.assertEqual((report["security_status"], report["functionality_status"]), ("pass", "pass"))
         self.assertEqual(report["analysis_complete"], sys.platform.startswith("linux"))
         self.assertEqual(report["hardening"]["patched"]["status"],
                          "checked" if sys.platform.startswith("linux") else "unsupported")
@@ -122,6 +126,7 @@ class UnseenPatchIntegrationTests(unittest.TestCase):
         report = self.evaluate("/* harmless insertion */\n\n" + self.source, 10)
         finding = self.findings(report)["exploit"]
         self.assertEqual(finding["category"], "IncompleteFix")
+        self.assertEqual((report["security_status"], report["functionality_status"]), ("fail", "pass"))
         self.assertTrue(finding["comparisons"]["sanitized"]["stable"])
         base = report["results"]["base_sanitized"]["exploit"][0]["sanitizer_report"]["stack_frames"][0]
         patched = report["results"]["patched_sanitized"]["exploit"][0]["sanitizer_report"]["stack_frames"][0]
@@ -144,12 +149,16 @@ class UnseenPatchIntegrationTests(unittest.TestCase):
                                       '    if (strcmp(value, "valid") == 0) { puts("changed"); return 0; }\n'
                                       '    puts("ok");')
         report = self.evaluate(candidate, 20)
+        self.assertEqual((report["security_status"], report["functionality_status"]), ("inconclusive", "fail"))
         self.assertEqual({name: f["category"] for name, f in self.findings(report).items()}, {
             "valid": "FunctionalRegression", "boundary": "Fixed", "invalid": "Fixed",
             "exploit": "Fixed", "unobserved": "Inconclusive"})
 
     def test_patch_build_failure_returns_30_with_source_and_failure_evidence(self):
         report = self.evaluate("#error deliberate fixture build failure\n" + self.fixed, 30)
+        self.assertEqual((report["security_status"], report["functionality_status"]),
+                         ("inconclusive", "inconclusive"))
+        self.assertIs(report["analysis_complete"], False)
         self.assertIn("Required patched build failed", report["errors"][0])
         self.assertTrue(report["builds"]["base_sanitized"]["success"])
         for mode in ("release", "sanitized"):
@@ -163,6 +172,7 @@ class UnseenPatchIntegrationTests(unittest.TestCase):
                                       '    if (strcmp(value, "exploit") == 0) { puts("unexpected"); return 0; }\n'
                                       '    puts("ok");')
         report = self.evaluate(candidate, 40)
+        self.assertEqual((report["security_status"], report["functionality_status"]), ("inconclusive", "pass"))
         self.assertEqual(self.findings(report)["exploit"]["category"], "Inconclusive")
         for mode in ("release", "sanitized"):
             result = report["results"][f"patched_{mode}"]["exploit"][0]
@@ -179,6 +189,7 @@ class UnseenPatchIntegrationTests(unittest.TestCase):
                                       '    if (strcmp(value, "valid") == 0) { puts("changed"); return 0; }\n'
                                       '    puts("ok");')
         report = self.evaluate(candidate, 10)
+        self.assertEqual((report["security_status"], report["functionality_status"]), ("fail", "fail"))
         self.assertEqual({name: f["category"] for name, f in self.findings(report).items()}, {
             "valid": "FunctionalRegression", "boundary": "NewIssue", "invalid": "Fixed",
             "exploit": "Fixed", "remaining": "IncompleteFix", "unobserved": "Inconclusive"})
