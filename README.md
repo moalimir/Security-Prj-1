@@ -227,6 +227,12 @@ a matching sanitized pair are classified separately, and both appear in reports.
 A sanitizer may establish a fix when the release baseline does not expose the
 error, provided both patched modes meet the independent oracle and are stable.
 
+For symbolized error sites, cross-version comparisons map unchanged baseline
+lines through the Git diff, including line shifts and detected file renames.
+The error type, detection mechanism, function, and mapped location must match.
+Changed or deleted sites do not establish the same error identity. Replays and
+minimization retain exact source-site signatures within each binary.
+
 | Category | Required evidence |
 | --- | --- |
 | `Fixed` | Exploit error reproduced on base and absent with expected patched behavior; functional cases meet their oracle. |

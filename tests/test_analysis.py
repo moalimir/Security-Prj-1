@@ -39,6 +39,31 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(classify(self.result(), crash, oracle)[0], "NewIssue")
         self.assertEqual(classify(crash, crash, oracle)[0], "IncompleteFix")
 
+    def test_cross_revision_matching_handles_changed_deleted_and_unsymbolized_sites(self):
+        from dataclasses import replace
+        from src.modules.classifier import classify
+
+        oracle = {"category": "valid", "expected_exit_code": 0}
+        crash = self.result(exit_code=1, error_type="heap-buffer-overflow", detection_mechanism="sanitizer")
+        self.assertEqual(classify(crash, crash, oracle, diff={"patch": ""})[0], "IncompleteFix")
+        crash.sanitizer_report = TestRunner._parse_asan_output(
+            "ERROR: AddressSanitizer: heap-buffer-overflow\n#0 0x123 in parse /base/source/parser.c:2:1\n")
+        cases = [
+            ("", "parser.c", "IncompleteFix"),
+            ("--- a/parser.c\n+++ b/parser.c\n@@ -1,3 +1,3 @@\n int parse(int n) {\n"
+             "-  return n;\n+  return n + 1;\n }\n", "parser.c", "NewIssue"),
+            ("--- a/parser.c\n+++ /dev/null\n@@ -1,3 +0,0 @@\n-int parse(int n) {\n"
+             "-  return n;\n-}\n", "parser.c", "NewIssue"),
+            ("diff --git a/parser.c b/moved.c\nsimilarity index 100%\n"
+             "rename from parser.c\nrename to moved.c\n", "moved.c", "IncompleteFix"),
+        ]
+        for patch_text, filename, expected in cases:
+            with self.subTest(patch=patch_text):
+                report = TestRunner._parse_asan_output(
+                    f"ERROR: AddressSanitizer: heap-buffer-overflow\n#0 0x456 in parse /patched/source/{filename}:2:1\n")
+                patched = replace(crash, sanitizer_report=report)
+                self.assertEqual(classify(crash, patched, oracle, diff={"patch": patch_text})[0], expected)
+
     def test_parser_preserves_frame_and_does_not_infer_null_from_segv(self):
         report = TestRunner._parse_asan_output(
             "ERROR: AddressSanitizer: heap-buffer-overflow\n"

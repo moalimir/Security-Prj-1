@@ -32,6 +32,33 @@ class DiffAnalyzer:
         return {"patch": proc.stdout, "files": files}
 
     @staticmethod
+    def map_signature(signature: tuple, report: dict) -> tuple | None:
+        """Map an unchanged baseline error site into the patched source."""
+        error_type, mechanism, location = signature
+        if location is None:
+            return signature
+        path, function, line_number = location
+        for file in PatchSet(report["patch"]):
+            if file.source_file.removeprefix("a/") != path:
+                continue
+            if file.is_removed_file:
+                return None
+            patched_path = file.target_file.removeprefix("b/")
+            offset = 0
+            for hunk in file:
+                if line_number < hunk.source_start or (hunk.source_length == 0 and line_number == hunk.source_start):
+                    break
+                for line in hunk:
+                    if line.source_line_no == line_number:
+                        # A changed/deleted site cannot establish error identity.
+                        if line.is_removed:
+                            return None
+                        return error_type, mechanism, (patched_path, function, line.target_line_no)
+                offset = hunk.target_start + hunk.target_length - hunk.source_start - hunk.source_length
+            return error_type, mechanism, (patched_path, function, line_number + offset)
+        return signature
+
+    @staticmethod
     def correlate(frames, report: dict, side: str, source_dir: Path) -> dict:
         matches = []
         primary, previous = True, -1

@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from src.core.test_runner import TestResult
+from src.modules.diff_analyzer import DiffAnalyzer
 
 
 class FindingCategory(str, Enum):
@@ -30,16 +31,16 @@ def matches_oracle(result: TestResult, oracle: dict) -> bool:
             and ("expected_stdout_hash" not in oracle or result.stdout_hash == oracle["expected_stdout_hash"]))
 
 
-def classify(base: TestResult, patched: TestResult, oracle: dict) -> tuple[str, str]:
+def classify(base: TestResult, patched: TestResult, oracle: dict, *, diff: dict | None = None) -> tuple[str, str]:
     if any(r.timed_out or r.resource_limited for r in (base, patched)):
         return "Inconclusive", "Timeout or resource/runtime failure; no vulnerability conclusion."
     if any(r.crashed and r.detection_mechanism == "signal" for r in (base, patched)):
         return "Inconclusive", "Unclassified signal termination; a confirmed memory/security error needs additional evidence."
     if patched.crashed:
-        if base.crashed and base.signature == patched.signature:
+        base_signature = DiffAnalyzer.map_signature(base.signature, diff) if diff is not None else base.signature
+        if base.crashed and base_signature == patched.signature:
             return "IncompleteFix", "The same error signature persists in the matching build mode."
-        if not base.crashed or base.signature != patched.signature:
-            return "NewIssue", "A newly observed error signature; this alone does not establish patch causation."
+        return "NewIssue", "A newly observed error signature; this alone does not establish patch causation."
     if oracle["category"] == "exploit":
         if not base.crashed or base.error_type != oracle["expected_error_type"]:
             return "Inconclusive", "The expected baseline error was not reproduced in this build mode."

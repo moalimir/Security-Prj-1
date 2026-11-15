@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.core.build_engine import BuildEngine
 from src.core.config_manager import BuildConfig, ExecConfig, ProjectConfig, TestConfig
-from src.core.test_runner import StackFrame, TestRunner
+from src.core.test_runner import SanitizerReport, StackFrame, TestResult, TestRunner
 
 
 def git(repo, *args):
@@ -75,6 +75,66 @@ class BuildTests(unittest.TestCase):
             result = HardeningChecker().check(path)
             self.assertEqual(result["status"], "unsupported")
             self.assertIsNone(result["nx"])
+
+    def test_cross_revision_matching_maps_unchanged_sites_and_keeps_replays_strict(self):
+        from types import SimpleNamespace
+        from src.modules.diff_analyzer import DiffAnalyzer
+        from src.orchestrator import PatchValidator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            git(root, "init", "-q")
+            git(root, "config", "user.name", "Fixture")
+            git(root, "config", "user.email", "fixture@example.invalid")
+            original = [f"/* line {n} */\n" for n in range(1, 41)]
+            (root / "parser.c").write_text("".join(original))
+            git(root, "add", ".")
+            git(root, "commit", "-qm", "base")
+            base = git(root, "rev-parse", "HEAD")
+            modified = (original[:4] + ["/* inserted */\n"] + original[4:10]
+                        + original[12:25] + ["/* another insertion */\n"] + original[25:])
+            analyzer = DiffAnalyzer(root)
+
+            def compare(base_line, patched_line, patched_file, error_type="heap-buffer-overflow"):
+                validator = PatchValidator("unused")
+                validator.builds, validator.runs = {}, {}
+                for side, filename, line in (("base", "parser.c", base_line),
+                                             ("patched", patched_file, patched_line)):
+                    source = root / side / "source"
+                    kind = "heap-buffer-overflow" if side == "base" else error_type
+                    for mode in ("release", "sanitized"):
+                        label = f"{side}_{mode}"
+                        validator.builds[label] = SimpleNamespace(source_dir=source)
+                        report = SanitizerReport(kind, [StackFrame(0, "parse", str(source / filename), line, "0x123")], "")
+                        validator.runs[label] = {"case": [TestResult(
+                            "case", root / "input", 1, None, "", "", False, False, mode,
+                            error_type=kind, detection_mechanism="sanitizer", sanitizer_report=report)]}
+                finding = validator._classify({"name": "case", "category": "exploit"}, analyzer, diff)
+                return finding, validator.runs["base_sanitized"]["case"][0], validator.runs["patched_sanitized"]["case"][0]
+
+            for filename in ("parser.c", "renamed.c"):
+                git(root, "checkout", "-q", base)
+                if filename != "parser.c":
+                    (root / "parser.c").rename(root / filename)
+                (root / filename).write_text("".join(modified))
+                git(root, "add", "--all")
+                git(root, "commit", "-qm", "move unchanged lines")
+                diff = analyzer.analyze(base, "HEAD")
+                for line in (1, 4, 5, 10, 13, 19, 25, 26, 32, 40):
+                    with self.subTest(filename=filename, line=line):
+                        mapped = modified.index(original[line - 1]) + 1
+                        finding, before, after = compare(line, mapped, filename)
+                        self.assertEqual(finding.category, "IncompleteFix")
+                        self.assertEqual({c["category"] for c in finding.comparisons.values()}, {"IncompleteFix"})
+                        if line != mapped:
+                            self.assertNotEqual(before.signature, after.signature)
+                            self.assertFalse(PatchValidator._stable([before, after]))
+                for line, patched_line, kind in ((5, 9, "heap-buffer-overflow"),
+                                                 (11, 11, "heap-buffer-overflow"),
+                                                 (5, 6, "heap-use-after-free")):
+                    with self.subTest(filename=filename, distinct_site=(line, patched_line, kind)):
+                        finding, _, _ = compare(line, patched_line, filename, kind)
+                        self.assertEqual(finding.category, "NewIssue")
 
     def test_correlation_preserves_crash_and_caller_frame_roles(self):
         from src.modules.diff_analyzer import DiffAnalyzer

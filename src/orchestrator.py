@@ -173,7 +173,7 @@ class PatchValidator:
             base = self.runs[f"base_{mode}"][name]
             patched = self.runs[f"patched_{mode}"][name]
             stable = self._stable(base) and self._stable(patched)
-            category, detail = classify(base[0], patched[0], case) if stable else (
+            category, detail = classify(base[0], patched[0], case, diff=diff) if stable else (
                 "Inconclusive", "Replay results are unstable; no fix conclusion.")
             comparisons[mode] = {"category": category, "detail": detail, "stable": stable}
             for side in ("base", "patched"):
