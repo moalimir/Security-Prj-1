@@ -1,0 +1,17 @@
+project_name: tlv_hardening_warn
+repository_path: ../targets/tlv_parser
+base_commit: base
+patched_commit: hardening_weak
+build:
+  release_cmd: make release OUT={output_dir}/target_bin
+  sanitized_cmd: make sanitized OUT={output_dir}/target_bin
+  release_binary: target_bin
+  sanitized_binary: target_bin
+execution:
+  input_mode: file
+  cmd_template: "{binary} {input_file}"
+  timeout_sec: 5
+  memory_limit_mb: 256
+test_suites:
+  oracle_manifest: ../tests/tlv_parser/oracle_manifest.json
+  regression_dir: ../tests/tlv_parser/regression

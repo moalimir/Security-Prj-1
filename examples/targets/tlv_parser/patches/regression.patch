@@ -1,0 +1,10 @@
+--- a/tlv_parser.c
++++ b/tlv_parser.c
+@@ -13,6 +13,7 @@
+     for (size_t i = 0; i < rec_len; ++i) {
+         if (payload[i] > 0x7f) return -1;
+     }
++    if (rec_len == 0 || rec_len >= 16) return -1;
+     char *label = malloc(17);
+     if (!label) return -1;
+     /* Deliberately vulnerable training baseline: the field holds at most 16 bytes. */

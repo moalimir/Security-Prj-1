@@ -1,0 +1,177 @@
+{
+  "target": "tlv_parser",
+  "oracle_version": "1.0",
+  "oracle_source": "TLV v1 protocol in examples/targets/tlv_parser/README.md; explicit expected outputs independent of parser execution",
+  "test_cases": [
+    {
+      "name": "valid_single_label",
+      "category": "valid",
+      "input_file": "valid/single_label.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "LABEL:hello\n"
+    },
+    {
+      "name": "valid_uint32_value",
+      "category": "valid",
+      "input_file": "valid/uint32_value.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "UINT32:42\n"
+    },
+    {
+      "name": "valid_multi_record",
+      "category": "valid",
+      "input_file": "valid/multi_record.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "LABEL:abc\nUINT32:256\n"
+    },
+    {
+      "name": "valid_nested_label",
+      "category": "valid",
+      "input_file": "valid/nested_label.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "NESTED->LABEL:cat\n"
+    },
+    {
+      "name": "valid_nested_uint32",
+      "category": "valid",
+      "input_file": "valid/nested_uint32.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "NESTED->UINT32:7\n"
+    },
+    {
+      "name": "valid_double_nested",
+      "category": "valid",
+      "input_file": "valid/double_nested.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "NESTED->NESTED->LABEL:A\n"
+    },
+    {
+      "name": "boundary_zero_records",
+      "category": "boundary",
+      "input_file": "boundary/zero_records.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": ""
+    },
+    {
+      "name": "boundary_empty_label",
+      "category": "boundary",
+      "input_file": "boundary/empty_label.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "LABEL:\n"
+    },
+    {
+      "name": "boundary_max_label_16",
+      "category": "boundary",
+      "input_file": "boundary/max_label_16.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "LABEL:abcdefghijklmnop\n"
+    },
+    {
+      "name": "boundary_uint32_max",
+      "category": "boundary",
+      "input_file": "boundary/uint32_max.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "UINT32:4294967295\n"
+    },
+    {
+      "name": "boundary_ascii_controls",
+      "category": "boundary",
+      "input_file": "boundary/ascii_controls.bin",
+      "expected_exit_code": 0,
+      "expected_stdout": "LABEL:\u0000\u007f\n"
+    },
+    {
+      "name": "invalid_bad_magic",
+      "category": "invalid",
+      "input_file": "invalid/bad_magic.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_bad_version",
+      "category": "invalid",
+      "input_file": "invalid/bad_version.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_bad_flags",
+      "category": "invalid",
+      "input_file": "invalid/bad_flags.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_truncated_payload",
+      "category": "invalid",
+      "input_file": "invalid/truncated_payload.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_unknown_tag",
+      "category": "invalid",
+      "input_file": "invalid/unknown_tag.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_uint32_wrong_len",
+      "category": "invalid",
+      "input_file": "invalid/uint32_wrong_len.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_non_ascii_label",
+      "category": "invalid",
+      "input_file": "invalid/non_ascii_label.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_nested_length",
+      "category": "invalid",
+      "input_file": "invalid/nested_length.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_count_mismatch",
+      "category": "invalid",
+      "input_file": "invalid/count_mismatch.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_trailing_data",
+      "category": "invalid",
+      "input_file": "invalid/trailing_data.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_later_record",
+      "category": "invalid",
+      "input_file": "invalid/later_record.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "exploit_original_poc",
+      "category": "exploit",
+      "input_file": "exploit/original_poc.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": "",
+      "expected_error_type": "heap-buffer-overflow"
+    },
+    {
+      "name": "exploit_bypass_poc",
+      "category": "exploit",
+      "input_file": "exploit/bypass_poc.bin",
+      "expected_exit_code": 1,
+      "expected_stdout": "",
+      "expected_error_type": "heap-buffer-overflow"
+    }
+  ]
+}

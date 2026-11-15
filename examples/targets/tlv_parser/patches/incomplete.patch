@@ -1,0 +1,10 @@
+--- a/tlv_parser.c
++++ b/tlv_parser.c
+@@ -56,6 +56,7 @@
+         if (rec_len > size - offset) return -1;
+         switch (tag) {
+             case TAG_LABEL:
++                if (rec_len > 16) return -1;
+                 if (parse_label_record(data + offset, rec_len, output) < 0) return -1;
+                 break;
+             default:
