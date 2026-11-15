@@ -12,7 +12,7 @@
 | Target 2 — TLV Parser | ✅ 95% | Instructor approval + Linux ELF run |
 | Test Suites (20 + 24 cases) | ✅ 100% | — |
 | Native pipeline runs (exit 10/20) | ✅ 100% | — |
-| Linux/ELF container run (exit 0) | ⏳ 0% | **Item 1 — highest priority** |
+| Linux/ELF container run (exit 0) | 🟡 ELF, hardening, patched release/sanitizer checks measured | **Item 1 — full validator verdict pending** |
 | CI for real targets | ✅ 100% | Waiting on actual CI run to pass |
 | Instructor approval | ⏳ 0% | **Item 2 — blocking** |
 | Contribution records | ⏳ 0% | Item 3 |
@@ -84,7 +84,7 @@
 | `tlv_incomplete` | **10** ✅ | 23 Fixed + **1 IncompleteFix** | bypass_poc still overflows |
 | `tlv_regression` | **20** ✅ | 22 Fixed + **2 FunctionalRegression** | empty + max-label rejected |
 
-> Exit 40 on `correct` scenarios is expected on macOS — ELF hardening is mandatory and was explicitly skipped because macOS produces Mach-O, not ELF. Linux container runs produce exit **0**.
+> Exit 40 on `correct` scenarios is expected on macOS — ELF hardening is mandatory and was explicitly skipped because macOS produces Mach-O, not ELF. A complete Linux run is expected to produce exit **0**, but that verdict has not been established. See [partial Linux evidence](linux-verification.md).
 
 ### Reproducer Bundles & Regression Reload
 
@@ -95,7 +95,7 @@
 
 ### Test Suite (Python)
 
-**Latest run: `44 tests, 43 passed, 1 skipped — OK`** (run with `.venv`, 2026-11-15)
+**Last full native run before the Linux diagnostic fix: `44 tests, 43 passed, 1 skipped — OK`** (run with `.venv`, 2026-11-15). Focused verification of the new fix is recorded in [Linux evidence](linux-verification.md); the full suite was not rerun.
 
 | Test file | Tests | Status |
 |---|---|---|
@@ -105,7 +105,7 @@
 | `test_build_and_diff.py` | ~5 | ✅ All pass |
 | `test_prepared_targets.py` | ~6 | ✅ All pass |
 | `test_tlv_target.py` | ~4 | ✅ All pass |
-| `test_unseen_patch.py` | ~5 | ✅ All pass |
+| `test_unseen_patch.py` | 10 | ✅ Focused checks pass |
 | Linux ELF hardening test | 1 | ⏭️ Skipped (macOS) |
 
 ### CI Workflow (`.github/workflows/validate.yml`)
@@ -117,11 +117,14 @@
 - ✅ Replays bundles and reloads generated regression cases inside the container
 - ✅ Uploads all reports as artifacts
 
-### Unseen-Patch Tool (`tools/eval_unseen_patch.py`)
+### Unseen-Patch Evaluation (`patch-validator --patch`)
 
 - ✅ Accepts `--patch-file` or `--patched-commit` against any base config
+- ✅ Main CLI accepts `--config CONFIG --patch PATCH -o OUTPUT`; the packaged
+  evaluator also powers the legacy tool entry point
 - ✅ Runs in isolated temporary clone; preserves evidence per submission
-- ✅ Covered by `tests/test_unseen_patch.py` (5 tests, all pass)
+- ✅ Covered by `tests/test_unseen_patch.py`, including CLI routing, standard
+  exit propagation, source isolation, and evidence preservation
 
 ### Docker
 
@@ -137,53 +140,35 @@
 
 **Effort:** ~2 hours | **Blocker for:** exit-0 verdicts, ELF hardening evidence
 
-**Why it matters:** The `correct` scenarios currently exit 40 on macOS. The course requires Linux ELF hardening checks to pass, producing exit **0**. All the pipeline and CI code is ready — only the Docker daemon needs to be running.
+**Status — partially verified, 2026-11-15:** Docker is running. A fresh image
+build failed on a Docker Hub TLS handshake, so defensive checks used the cached
+amd64 runtime with the current workspace mounted read-only. The measured
+results and reproduction command are in [Linux verification](linux-verification.md).
 
-**Commands:**
+- 12 release/sanitizer ELF64 x86_64 builds succeeded across `cjson_correct`,
+  `tlv_correct`, and `tlv_hardening_warn`.
+- Static inspection confirmed full RELRO, NX, PIE, canary, and Fortify symbols
+  on both correct comparisons; the weak TLV variant lost canary and full RELRO,
+  and both reductions were detected.
+- All 124 patched release/sanitizer functional checks now pass. The runner
+  recognizes Linux x86_64 `VirtualApple` and omits the release address-space cap
+  only with a verified finite cgroup v2 memory bound (2 GiB here). Native Linux
+  retains its configured cap; ASan retains its RSS setting. Execution records
+  include the selected memory policy.
+- 26 native and 27 focused Linux tests pass. The three initial Linux foundation
+  failures now pass with the compatibility path; original failure logs remain.
 
-```bash
-# 1. Start Docker Desktop (macOS)
-open -a Docker       # wait for the whale icon to appear in the menu bar
+**Still pending:** the full validator exit-0 evidence, baseline exploit/bypass
+executions, incomplete/regression verdicts, replay/minimization/regression reload,
+and hosted CI. Native Linux cap selection is unit-tested; execution on native
+x86_64 hardware remains unmeasured. The Rosetta release path uses the finite
+container memory allowance in place of the process virtual-address cap. PASS
+criteria are preserved.
 
-# 2. Build the image (targets baked in)
-cd /path/to/Project
-docker build --platform linux/amd64 -t patch-validator -f docker/Dockerfile .
-
-# 3. Run all target scenarios and check exit codes
-for scenario in cjson_correct:0 cjson_incomplete:10 cjson_regression:20 \
-                tlv_correct:0 tlv_incomplete:10 tlv_regression:20 tlv_hardening_warn:0; do
-  variant=${scenario%:*}
-  expected=${scenario#*:}
-  mkdir -p "reports/linux/$variant"
-  set +e
-  docker run --rm --platform linux/amd64 --network none \
-    --memory 2g --cpus 2 --pids-limit 128 \
-    --cap-drop ALL --security-opt no-new-privileges \
-    -v "$PWD/reports/linux/$variant:/workspace/reports:rw" \
-    patch-validator --config "configs/$variant.yaml" -o /workspace/reports
-  status=$?; set -e
-  echo "$variant: exit $status (expected $expected)"
-done
-
-# 4. Replay bundles inside container
-for variant in cjson_correct tlv_correct; do
-  docker run --rm --platform linux/amd64 --network none \
-    --memory 2g --cpus 2 --pids-limit 128 \
-    --cap-drop ALL --security-opt no-new-privileges \
-    -v "$PWD/reports/linux/$variant:/workspace/reports:rw" \
-    --entrypoint python patch-validator \
-    ci/check_reports.py replay /workspace/reports
-done
-
-# 5. Verify report structure
-for variant in cjson_correct cjson_incomplete cjson_regression \
-               tlv_correct tlv_incomplete tlv_regression; do
-  python ci/check_reports.py report "reports/linux/$variant" \
-    --expected-exit "$(grep "$variant" <<< "cjson_correct:0 cjson_incomplete:10 ...")"
-done
-```
-
-**Expected outcome:** All 7 scenarios pass; `cjson_correct` and `tlv_correct` exit **0** with ELF hardening evidence in `report.json`. Save `reports/linux/` as final submission evidence.
+Latest evidence is retained in `reports/linux/rosetta-compatibility/`; earlier
+failure results remain in `reports/linux/defensive/`. These partial files are separate from full validator
+reports and do not assign a validator exit code. Keep them separately with the
+submission because `reports/` is Git-ignored.
 
 ---
 
@@ -258,12 +243,10 @@ Exit code = priority(30 > 10 > 20 > 40 > 0)
 **Practice for the unseen-patch defense scenario:**
 
 ```bash
-# The defense may give you a patch file or a commit — use the eval tool
+# Use a fresh output directory for each submission.
 source .venv/bin/activate
-python tools/eval_unseen_patch.py \
-  --base-config configs/cjson_correct.yaml \
-  --patch-file /path/to/unseen.patch \
-  --output-dir reports/unseen_defense
+patch-validator --config configs/cjson_correct.yaml \
+  --patch /path/to/unseen.patch -o reports/unseen_defense
 # → reads the report and explain the verdict
 ```
 
@@ -291,7 +274,7 @@ python tools/eval_unseen_patch.py \
 | Docker + CI workflow | ✅ Complete |
 | Native evidence — exit 10 & 20 (`reports/targets_native/`) | ✅ Complete |
 | Unseen-patch evaluation tool | ✅ Complete |
-| **Linux ELF evidence — exit 0 (`reports/linux/`)** | ⏳ **TODO — Item 1** |
+| **Linux ELF evidence — exit 0 (`reports/linux/`)** | 🟡 **Partial — ELF/hardening measured; full exit 0 pending (Item 1)** |
 | **Instructor written approval** | ⏳ **TODO — Item 2** |
 | Run instructions (`README.md`) | ✅ Complete |
 | **Team contribution records (`docs/contributions.md`)** | ⏳ **TODO — Item 3** |

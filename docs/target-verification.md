@@ -74,10 +74,9 @@ binary hashes, diffs and human-readable reports are in `reports/targets_native/`
 ## Pending checks
 
 The native correct verdicts are **40**, because mandatory ELF hardening was
-explicitly skipped. Docker is installed but its daemon is stopped. Linux
-x86_64 image build/execution, actual ELF hardening evidence, and hosted CI have
-not been run here. The existing Dockerfile and CI workflow now have the
-previously missing preparer and cJSON configs they reference; their execution
-is still pending. Instructor approval of targets, harnesses and oracles is
-also pending. The old pinned cJSON baseline deliberately retains the studied
+explicitly skipped. Subsequent partial [Linux verification](linux-verification.md)
+measured ELF builds, hardening, and patched release/sanitizer functional outcomes
+with Docker running. A guarded memory policy resolves the initial Rosetta release
+mapping failures; full validator exit-0 evidence and hosted CI remain pending. Instructor approval of
+targets, harnesses and oracles is also pending. The old pinned cJSON baseline deliberately retains the studied
 vulnerability; this study is not a claim of overall library security.

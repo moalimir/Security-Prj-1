@@ -42,14 +42,17 @@ start of the next run.
 The unseen-patch defense command is:
 
 ```sh
-python tools/eval_unseen_patch.py --base-config configs/tlv_correct.yaml \
-  --patch-file /absolute/path/candidate.patch --output-dir reports/unseen_trial
+patch-validator --config configs/tlv_correct.yaml \
+  --patch /absolute/path/candidate.patch --output-dir reports/unseen_trial
 ```
 
-Use `--patched-commit <ref>` in place of `--patch-file` for an existing commit.
+The legacy `python tools/eval_unseen_patch.py --base-config CONFIG --patch-file
+PATCH --output-dir OUTPUT` command also supports `--patched-commit <ref>` in
+place of `--patch-file` for an existing commit.
 The wrapper resolves exact commits, clones locally into a temporary directory,
 checks and applies the patch through argument-based Git calls, and invokes
-`python -m src` with the same interpreter. It returns the validator verdict;
+the normal `PatchValidator` pipeline in the same interpreter. It returns the
+validator verdict;
 configuration, Git, and filesystem failures return 30. Existing source files,
 working-tree changes, and refs remain untouched. Use a fresh output directory
 for every submission: an existing `unseen/` evidence folder is never replaced.

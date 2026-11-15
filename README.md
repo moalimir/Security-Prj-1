@@ -14,7 +14,9 @@ reproducers/regression cases, and writes JSON, Markdown, and HTML reports.
 upstream 1.7.17 library and issue #800 fix; TLV is an independent original C
 program. Run `python tools/prepare_targets.py` once to prepare both offline.
 Native tests exercise the security and regression behavior. Instructor approval
-and Linux x86_64 container evidence remain separate requirements. See
+and complete Linux x86_64 validator evidence remain separate requirements. Partial
+ELF/hardening measurements and the guarded Rosetta compatibility fix are recorded
+in [`docs/linux-verification.md`](docs/linux-verification.md). See
 [`docs/course-checklist.md`](docs/course-checklist.md).
 The measured native target results are in
 [`docs/target-verification.md`](docs/target-verification.md).
@@ -35,7 +37,8 @@ python -m src --config .demo/correct.yaml --output-dir reports/demo --skip-harde
 
 The final command exits **40** because ELF hardening was explicitly skipped;
 its test findings are all `Fixed`. The expected verdict for a complete Linux
-container run is **0**; container execution is still pending in this workspace.
+container run is **0**; that full validator verdict is still pending. Partial
+Linux build/hardening and patched functional checks have been measured.
 The local fixture
 repository is created under `.demo/`; the preparer refuses to overwrite a
 nonempty destination. For a new fixture use `--output-dir PATH`.
@@ -57,6 +60,38 @@ Tests use temporary Git repositories and real C builds, including the vendored
 cJSON and TLV study sources. No test-time target downloads are needed.
 They also exercise failure verdicts, dirty checkout preservation, shell-sensitive
 paths, stdin, signals/timeouts, source correlation, minimization, and report escaping.
+
+## Defense day: evaluate an unseen patch
+
+After installation and `python tools/prepare_targets.py`, run from the project
+checkout with a fresh output directory for each submission:
+
+```sh
+patch-validator --config configs/cjson_correct.yaml \
+  --patch /absolute/path/unseen.patch -o reports/unseen
+# Equivalent entry point:
+python -m src --config configs/cjson_correct.yaml \
+  --patch /absolute/path/unseen.patch -o reports/unseen
+```
+
+`--patch` applies the submitted diff to the configured `base_commit` in a
+temporary clone, replacing the configured `patched_commit` for this evaluation.
+The original repository and working-tree edits are preserved. The normal
+pipeline evaluates both build modes against the unchanged independent oracle,
+including remaining/new security errors and functional regressions. Verdicts
+come from execution evidence, never the patch filename or known revision names.
+Standard exits are `0` (pass), `10` (remaining/new security error), `20`
+(functional regression), `30` (build/config/tool error, including patch-application
+failure), and `40` (inconclusive). A complete Linux/ELF run is required for pass.
+
+After patch preparation, pipeline reports are written to the output directory.
+Patch-preparation failures print a diagnostic and return `30`.
+Its `unseen/` folder retains the
+submitted patch, evaluated diff, exact commits, configs, source bundle, and
+restore/rerun commands. An existing `unseen/` folder is never overwritten.
+The legacy `python tools/eval_unseen_patch.py --base-config CONFIG --patch-file
+PATCH --output-dir OUTPUT` command remains supported; it also accepts
+`--patched-commit REF` instead of `--patch-file PATCH`.
 
 ## Linux container
 
@@ -88,12 +123,23 @@ configs/cjson_correct.yaml --output-dir /workspace/reports`. Prepare host target
 first when using Compose's bind mounts. Configurations and build commands are trusted
 project inputs: building a target executes its code and build scripts.
 
-Release tests on Linux use `RLIMIT_AS` for the configured memory cap. Sanitized
-tests use ASan's RSS limit because ASan reserves a very large virtual address
-range; the container's memory/PID limits provide the outer resource boundary.
-Native macOS runs do not enforce the release address-space cap. These limits are
-recorded with the configuration; a resource/runtime failure or timeout is
-inconclusive rather than a confirmed vulnerability. See the
+Release tests on native Linux use `RLIMIT_AS` for the configured memory cap.
+On Linux x86_64 with `vendor_id: VirtualApple` in `/proc/cpuinfo`, the runner
+recognizes Rosetta and omits that cap only when `/sys/fs/cgroup/memory.max`
+contains a finite positive limit. The supplied Docker commands provide a 2 GiB
+container-wide memory bound for this compatibility path. Missing, unreadable,
+unlimited, or invalid cgroup limits retain `RLIMIT_AS`; other emulators receive
+no automatic exemption.
+
+Sanitized tests retain ASan's configured RSS limit because ASan reserves a very
+large virtual address range. Native macOS runs do not enforce the release
+address-space cap. Each execution's `memory_limits` records the configured cap,
+selected `RLIMIT_AS`, ASan RSS limit, observed cgroup bound, and Rosetta detection
+in JSON reports and bundle/replay results. Replay checks its current environment.
+The Rosetta release fallback uses the container's physical-memory allowance;
+the configured 256 MiB process cap is inactive. Swap is controlled separately by
+[Docker's resource settings](https://docs.docker.com/engine/containers/resource_constraints/).
+A resource/runtime failure or timeout remains inconclusive. See the
 [ASan limitation](https://clang.llvm.org/docs/AddressSanitizer.html#limitations).
 
 Target stdout/stderr are spooled to disk, with a 16 MiB file-size cap and a
@@ -192,12 +238,26 @@ inspect the reported frames/diff before claiming a common root cause. Signal-onl
 errors retain their observed signal and do not claim an inferred memory subtype.
 
 Diff correlation reports changed-line overlap, weaker same-function evidence,
-or `unknown`. Caller effects and unsymbolized paths may remain unknown. ELF
+or `unknown`. Each match retains the stack frame number and its crash/caller
+role, for example `same_function (caller frame #1: parse_object)`. Markdown and
+HTML show this evidence separately for each mode and binary, including source
+locations and the limitation that association does not prove causation.
+Later stack sequences whose frame numbers restart are labeled `auxiliary`
+(for example allocation/free traces); roles describe the first recorded trace.
+Caller effects and unsymbolized paths may remain unknown. ELF
 hardening records RELRO level, NX, PIE, canary and Fortify symbol evidence, and
 warns on reductions. PIE does not prove runtime ASLR; symbols do not prove that
 every function is protected.
 
 ## Reports, replay, and regression inputs
+
+Markdown and HTML reports start with a combined verdict table that also shows
+each mode's classification. Separate release and ASan/UBSan sections then show
+base/patched execution records and every replay: exit codes, signals, execution
+status, stdout, and stderr. The release section includes ELF hardening; the
+instrumented section includes error type, detection mechanism, and symbolized
+stack frames. Missing evidence, timeouts, and resource failures remain explicit.
+HTML uses scrollable tables and escaped output; complete JSON evidence is retained.
 
 `--output-dir` contains:
 

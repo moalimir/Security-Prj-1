@@ -3,10 +3,11 @@
 The target source/revision work is implemented. The supplied brief still requires
 approval and measured Linux evidence before final assessment:
 
-- [ ] Two independent C/C++ target programs running as Linux x86_64 ELF binaries,
+- [x] Two independent C/C++ target programs running as Linux x86_64 ELF binaries,
   including at least one real non-toy project/library. Source preparation is
-  complete: real cJSON 1.7.17 and the independent original TLV program; Linux
-  execution remains to be measured on this workspace.
+  complete: real cJSON 1.7.17 and the independent original TLV program. ELF
+  builds and patched release/sanitizer functional executions are measured using
+  the guarded Rosetta memory policy. See [Linux evidence](linux-verification.md).
 - [ ] Instructor-approved targets, source provenance, patch provenance, harness
   interfaces, independent reference tests, and expected outcomes.
 - [x] For **each target**, exact vulnerable, correct, incomplete, and functional
@@ -17,7 +18,8 @@ approval and measured Linux evidence before final assessment:
   and sanitized builds; failures/inconclusive conditions must remain explicit.
 - [ ] Reviewed error-to-diff evidence, reproducible bundles with at least three
   replays, minimized same-error/site inputs, and automatically rerun regressions.
-- [ ] Linux container hardening evidence and detection of unintended reductions.
+- [x] Linux container ELF hardening evidence and detection of unintended reductions
+  (static inspection; complete validator verdicts remain pending).
 - [ ] CI runs for the pinned real targets and retained JSON/human-readable reports.
 - [ ] An independently reproducible submission containing source, configs,
   revisions, patches, tests, evidence, pipeline, and run instructions.
@@ -40,3 +42,11 @@ revision details are in `examples/targets/` and `docs/target-revisions.json`.
 The course's Linux ELF/container verification requires a running Docker daemon.
 The CI workflow includes that verification for Linux x86_64. Report its actual
 result when run; do not replace it with an assertion based on the native smoke test.
+
+Latest partial Linux measurements are in `reports/linux/rosetta-compatibility/`:
+12 x86_64 ELF builds, full hardening inspection, detected canary/RELRO reductions,
+and 124 passing patched release/sanitizer functional checks. Rosetta now uses a
+verified finite container memory bound for release execution; native Linux keeps
+the process address-space cap. Original mapping failures remain recorded under
+`reports/linux/defensive/`. This does not establish a full validator exit 0.
+See [the measured results](linux-verification.md).
