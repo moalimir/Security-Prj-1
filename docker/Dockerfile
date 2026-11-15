@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:$PATH"
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc g++ make cmake clang llvm git python3 python3-venv binutils file ca-certificates \
+    gcc g++ make cmake clang libclang-rt-18-dev llvm git python3 python3-venv binutils file ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN python3 -m venv /opt/venv
 WORKDIR /workspace
