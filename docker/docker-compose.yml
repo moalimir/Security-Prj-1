@@ -1,0 +1,20 @@
+services:
+  patch-validator:
+    platform: linux/amd64
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    command: ["--config", ".demo/correct.yaml", "--output-dir", "/workspace/reports"]
+    volumes:
+      - ../reports:/workspace/reports:rw
+      - ../targets:/workspace/targets:ro
+      - ../tests:/workspace/tests:ro
+      - ../configs:/workspace/configs:ro
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    network_mode: none

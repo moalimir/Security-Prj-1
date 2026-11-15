@@ -1,0 +1,8 @@
+.git
+.venv
+.demo
+**/__pycache__
+*.egg-info
+reports
+reproducers
+targets
