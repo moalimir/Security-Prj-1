@@ -281,16 +281,19 @@ class PatchValidator:
         digest = hashlib.sha256(data + case["expected_error_type"].encode()).hexdigest()
         name = f"regression_{digest[:20]}"
         for directory in {self.regression_dir, self.persistent_regression_dir}:
-            directory.mkdir(parents=True, exist_ok=True)
-            path = directory / "oracle_manifest.json"
-            entries = load_oracle(path) if path.exists() else []
-            if name in {c["name"] for c in entries}:
-                continue
-            (directory / f"{name}.input").write_bytes(data)
-            entry = {k: v for k, v in case.items() if k != "input_path"}
-            entry.update(name=name, input_file=f"{name}.input", generated_from=case.get("generated_from", case["name"]))
-            entries.append(entry)
-            write_json(path, {"test_cases": [{k: v for k, v in e.items() if k != "input_path"} for e in entries]})
+            try:
+                directory.mkdir(parents=True, exist_ok=True)
+                path = directory / "oracle_manifest.json"
+                entries = load_oracle(path) if path.exists() else []
+                if name in {c["name"] for c in entries}:
+                    continue
+                (directory / f"{name}.input").write_bytes(data)
+                entry = {k: v for k, v in case.items() if k != "input_path"}
+                entry.update(name=name, input_file=f"{name}.input", generated_from=case.get("generated_from", case["name"]))
+                entries.append(entry)
+                write_json(path, {"test_cases": [{k: v for k, v in e.items() if k != "input_path"} for e in entries]})
+            except OSError as exc:
+                raise ConfigError(f"Cannot save regression corpus {directory}: {exc}") from exc
 
 
 def main(argv=None) -> int:

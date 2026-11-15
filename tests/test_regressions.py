@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import yaml
 
@@ -79,6 +80,41 @@ class RegressionTests(unittest.TestCase):
         Path(generated["input_path"]).write_bytes(b"conflicting copy")
         self.assertEqual(first.run(), 30)
         self.assertIn("Duplicate test name", first.report["errors"][0])
+
+
+    def test_corpus_write_failures_return_30_and_persist_failure_reports(self):
+        from src.modules.report_generator import write_json
+
+        for failure in ("input", "manifest"):
+            with self.subTest(failure=failure):
+                validator = PatchValidator(str(self.config), str(self.root / f"failed {failure}"),
+                                           skip_hardening=True)
+                write_bytes = Path.write_bytes
+
+                def save_fixture(case, finding):
+                    if case["category"] == "exploit":
+                        validator._save_regression(case, Path(case["input_path"]).read_bytes())
+
+                def save_input(path, data):
+                    if failure == "input" and path.parent == self.corpus:
+                        raise PermissionError("corpus input is read-only")
+                    return write_bytes(path, data)
+
+                def save_manifest(path, data):
+                    if failure == "manifest" and path.parent == self.corpus:
+                        raise OSError("corpus manifest disk is full")
+                    return write_json(path, data)
+
+                with patch.object(validator, "_bundle", side_effect=save_fixture), \
+                        patch.object(Path, "write_bytes", save_input), \
+                        patch("src.orchestrator.write_json", side_effect=save_manifest):
+                    self.assertEqual(validator.run(), 30)
+                report = json.loads((validator.workspace / "report.json").read_text())
+                self.assertEqual(report["exit_code"], 30)
+                self.assertIn(str(self.corpus), report["errors"][0])
+                self.assertIn("Cannot save regression corpus", report["errors"][0])
+                self.assertFalse(report.get("analysis_complete", False))
+                self.assertFalse((self.corpus / "oracle_manifest.json").exists())
 
 
 if __name__ == "__main__":
