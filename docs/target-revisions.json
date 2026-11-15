@@ -1,0 +1,15 @@
+{
+  "cjson": {
+    "base": "6a25e7f62674716d02571b156721fdb644156b9c",
+    "correct": "36aa41c6bb7f33a336341358a45a8b69bca0ad44",
+    "incomplete": "11a9d405851bead3b35267b191392a5aab9ebeb8",
+    "regression": "d2ae224481464991a80297136edc9f33524d7c9f"
+  },
+  "tlv_parser": {
+    "base": "00ea7a9c3d0c39b56bb41afb8bc11667a6a66940",
+    "correct": "09cdde333647aa4029dec2a0ef0d9cb58221e721",
+    "incomplete": "6ee57869ba153ecd4d9bf2876b327850495df990",
+    "regression": "87561149ce60c2b27df1f7978b3af98edea46e76",
+    "hardening_weak": "577a72b76882524535d43448b88e681d7667cfef"
+  }
+}
