@@ -1,0 +1,149 @@
+{
+  "target": "cjson-1.7.17-issue-800",
+  "oracle_version": "2.0",
+  "test_cases": [
+    {
+      "name": "valid_simple_object",
+      "category": "valid",
+      "input_file": "valid/simple_object.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"name\":\"student\",\"value\":42}\n"
+    },
+    {
+      "name": "valid_nested_array",
+      "category": "valid",
+      "input_file": "valid/nested_array.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "[1,[2,3],[]]\n"
+    },
+    {
+      "name": "boundary_empty_array",
+      "category": "boundary",
+      "input_file": "boundary/empty_array.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "[]\n"
+    },
+    {
+      "name": "invalid_missing_bracket",
+      "category": "invalid",
+      "input_file": "invalid/missing_bracket.json",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "valid_scalars",
+      "category": "valid",
+      "input_file": "valid/scalars.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "[true,false,null,0,-42]\n"
+    },
+    {
+      "name": "valid_nested_object",
+      "category": "valid",
+      "input_file": "valid/nested_object.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"outer\":{\"value\":7}}\n"
+    },
+    {
+      "name": "valid_string_escapes",
+      "category": "valid",
+      "input_file": "valid/string_escapes.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"s\":\"line\\nquote\\\"\"}\n"
+    },
+    {
+      "name": "valid_unicode",
+      "category": "valid",
+      "input_file": "valid/unicode.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "{\"snowman\":\"☃\"}\n"
+    },
+    {
+      "name": "boundary_empty_object",
+      "category": "boundary",
+      "input_file": "boundary/empty_object.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "{}\n"
+    },
+    {
+      "name": "boundary_empty_string",
+      "category": "boundary",
+      "input_file": "boundary/empty_string.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "\"\"\n"
+    },
+    {
+      "name": "boundary_root_number",
+      "category": "boundary",
+      "input_file": "boundary/root_number.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "42\n"
+    },
+    {
+      "name": "boundary_whitespace",
+      "category": "boundary",
+      "input_file": "boundary/whitespace.json",
+      "expected_exit_code": 0,
+      "expected_stdout": "[1]\n"
+    },
+    {
+      "name": "boundary_empty_input",
+      "category": "boundary",
+      "input_file": "boundary/empty.json",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_missing_colon",
+      "category": "invalid",
+      "input_file": "invalid/missing_colon.json",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_trailing_data",
+      "category": "invalid",
+      "input_file": "invalid/trailing_data.json",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_trailing_comma",
+      "category": "invalid",
+      "input_file": "invalid/trailing_comma.json",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_unterminated_string",
+      "category": "invalid",
+      "input_file": "invalid/unterminated_string.json",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "invalid_embedded_nul",
+      "category": "invalid",
+      "input_file": "invalid/embedded_nul.json",
+      "expected_exit_code": 1,
+      "expected_stdout": ""
+    },
+    {
+      "name": "exploit_original_poc",
+      "category": "exploit",
+      "input_file": "exploit/original_poc.json",
+      "expected_exit_code": 1,
+      "expected_stdout": "",
+      "expected_error_type": "heap-buffer-overflow"
+    },
+    {
+      "name": "exploit_bypass_poc",
+      "category": "exploit",
+      "input_file": "exploit/bypass_poc.json",
+      "expected_exit_code": 1,
+      "expected_stdout": "",
+      "expected_error_type": "heap-buffer-overflow"
+    }
+  ],
+  "oracle_source": "JSON syntax and literal compact outputs independently checked with Python json; original exploit from upstream issue #800; nested bypass derived from the same object grammar. Instructor approval pending."
+}

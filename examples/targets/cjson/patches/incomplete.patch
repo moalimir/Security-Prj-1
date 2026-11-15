@@ -1,0 +1,14 @@
+--- a/cJSON.c
++++ b/cJSON.c
+@@ -1659,6 +1659,11 @@
+             current_item = new_item;
+         }
+ 
++        if ((input_buffer->depth == 1) && cannot_access_at_index(input_buffer, 1))
++        {
++            goto fail; /* nothing comes after the comma */
++        }
++
+         /* parse the name of the child */
+         input_buffer->offset++;
+         buffer_skip_whitespace(input_buffer);

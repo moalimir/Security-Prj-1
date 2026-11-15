@@ -1,0 +1,26 @@
+From c39043866aaef2e599045b2c04936b247f84d82d Mon Sep 17 00:00:00 2001
+From: orri <orri@systemb.is>
+Date: Tue, 30 Apr 2024 09:50:19 +0000
+Subject: [PATCH] Fix heap buffer overflow
+
+Fixes #800
+---
+ cJSON.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/cJSON.c b/cJSON.c
+index 4f5b38dc9..97564bb0a 100644
+--- a/cJSON.c
++++ b/cJSON.c
+@@ -1660,6 +1660,11 @@ static cJSON_bool parse_object(cJSON * const item, parse_buffer * const input_bu
+             current_item = new_item;
+         }
+ 
++        if (cannot_access_at_index(input_buffer, 1))
++        {
++            goto fail; /* nothing comes after the comma */
++        }
++
+         /* parse the name of the child */
+         input_buffer->offset++;
+         buffer_skip_whitespace(input_buffer);

@@ -1,0 +1,23 @@
+{
+  "project": "cJSON",
+  "repository": "https://github.com/DaveGamble/cJSON",
+  "upstream_tag": "v1.7.17",
+  "upstream_commit": "87d8f0961a01bf09bef98ff89bae9fdec42181ee",
+  "source_archive": "https://codeload.github.com/DaveGamble/cJSON/tar.gz/87d8f0961a01bf09bef98ff89bae9fdec42181ee",
+  "license": "MIT (base/LICENSE)",
+  "issue": "https://github.com/DaveGamble/cJSON/issues/800",
+  "fix_commit": "c39043866aaef2e599045b2c04936b247f84d82d",
+  "fix_patch": "https://github.com/DaveGamble/cJSON/commit/c39043866aaef2e599045b2c04936b247f84d82d.patch",
+  "variants": {
+    "base": "Unmodified upstream library plus the study driver and Makefile.",
+    "correct": "The exact upstream fix patch, applied to v1.7.17.",
+    "incomplete": "Course mutation: guard only depth 1; nested objects bypass it.",
+    "regression": "Course mutation: complete fix plus rejection of empty objects."
+  },
+  "sha256": {
+    "cJSON.c": "de63e951ce3bc9b6938c7635575a6c90c3b364595b0b0f4c5ae8f9c83a43c17d",
+    "cJSON.h": "c01a8ca5609bb2c956dd1ae836d5d926ec68153ecebc5a75ea0febc2e076da8d",
+    "LICENSE": "a36dda207c36db5818729c54e7ad4e8b0c6fba847491ba64f372c1a2037b6d5c",
+    "UPSTREAM_README.md": "c588125722bcd6e91e7e322fe9ce90252a5eca5c9fdf81ec967a3d45102010d6"
+  }
+}

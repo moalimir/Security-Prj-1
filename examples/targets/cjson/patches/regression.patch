@@ -1,0 +1,31 @@
+--- a/cJSON.c
++++ b/cJSON.c
+@@ -1623,7 +1623,7 @@
+     buffer_skip_whitespace(input_buffer);
+     if (can_access_at_index(input_buffer, 0) && (buffer_at_offset(input_buffer)[0] == '}'))
+     {
+-        goto success; /* empty object */
++        goto fail; /* study regression: rejects valid empty objects */
+     }
+ 
+     /* check if we skipped to the end of the buffer */
+@@ -1659,6 +1659,11 @@
+             current_item = new_item;
+         }
+ 
++        if (cannot_access_at_index(input_buffer, 1))
++        {
++            goto fail; /* nothing comes after the comma */
++        }
++
+         /* parse the name of the child */
+         input_buffer->offset++;
+         buffer_skip_whitespace(input_buffer);
+@@ -1693,7 +1698,6 @@
+         goto fail; /* expected end of object */
+     }
+ 
+-success:
+     input_buffer->depth--;
+ 
+     if (head != NULL) {
