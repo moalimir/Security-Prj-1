@@ -1,14 +1,17 @@
 """Exercise unseen-patch isolation with real Git repositories."""
 import json
 from pathlib import Path
+import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 import yaml
 
-from tools import eval_unseen_patch
+from src import unseen_patch as eval_unseen_patch
+from src.orchestrator import main as validator_main
 
 
 class UnseenPatchTests(unittest.TestCase):
@@ -54,7 +57,7 @@ class UnseenPatchTests(unittest.TestCase):
     def test_patch_paths_with_spaces_are_isolated_and_archived(self):
         seen = {}
 
-        def validate(config, output):
+        def validate(config, output, **options):
             cfg = yaml.safe_load(config.read_text())
             clone = Path(cfg["repository_path"])
             self.assertNotEqual(clone, self.repo)
@@ -112,7 +115,9 @@ class UnseenPatchTests(unittest.TestCase):
         with patch.object(eval_unseen_patch, "_run_validator", return_value=0):
             for name in ("first", "second"):
                 self.output = self.root / name
-                self.assertEqual(eval_unseen_patch.main(self.args("--patch-file", str(self.patch_path))), 0)
+                candidate = self.root / f"{name}.patch"
+                candidate.write_bytes(self.patch_path.read_bytes())
+                self.assertEqual(eval_unseen_patch.main(self.args("--patch-file", str(candidate))), 0)
                 metadata = json.loads((self.output / "unseen" / "metadata.json").read_text())
                 commits.append(metadata["patched_commit"])
         self.assertEqual(commits[0], commits[1])
@@ -122,6 +127,76 @@ class UnseenPatchTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as result:
                 eval_unseen_patch.main(self.args(*candidate))
             self.assertEqual(result.exception.code, 30)
+
+    def test_main_cli_evaluates_the_submitted_patch_and_returns_standard_verdicts(self):
+        def validate(config, output, **options):
+            cfg = yaml.safe_load(config.read_text())
+            clone = Path(cfg["repository_path"])
+            self.assertEqual((clone / "target.c").read_text(), "corrected\n")
+            self.assertNotEqual(clone, self.repo)
+            self.assertEqual(options, {"skip_minimize": True, "skip_hardening": True})
+            return code
+
+        for code in (0, 10, 20, 30, 40):
+            with self.subTest(code=code):
+                self.output = self.root / f"verdict {code}"
+                with patch.object(eval_unseen_patch, "_run_validator", side_effect=validate):
+                    actual = validator_main(["--config", str(self.config), "--patch", str(self.patch_path),
+                                             "-o", str(self.output), "--skip-minimize", "--skip-hardening"])
+                self.assertEqual(actual, code)
+                self.assertEqual((self.repo / "target.c").read_text(), "original\n")
+                metadata = json.loads((self.output / "unseen" / "metadata.json").read_text())
+                self.assertEqual(metadata["rerun_command"][-2:], ["--skip-minimize", "--skip-hardening"])
+
+    def test_main_cli_without_patch_keeps_normal_pipeline(self):
+        with patch("src.orchestrator.PatchValidator") as validator:
+            validator.return_value.run.return_value = 40
+            self.assertEqual(validator_main(["-c", str(self.config), "-o", str(self.output)]), 40)
+            validator.assert_called_once_with(str(self.config), str(self.output),
+                                              skip_minimize=False, skip_hardening=False)
+
+    def test_unseen_path_uses_the_standard_validator(self):
+        with patch("src.orchestrator.PatchValidator") as validator:
+            validator.return_value.run.return_value = 20
+            self.assertEqual(eval_unseen_patch._run_validator(self.config, self.output,
+                            skip_minimize=True, skip_hardening=False), 20)
+            validator.assert_called_once_with(str(self.config), str(self.output),
+                                              skip_minimize=True, skip_hardening=False)
+
+    def test_cli_runs_a_harmless_patch_through_all_four_builds(self):
+        (self.repo / "target.c").write_text('print("ok")\n')
+        self.git("commit", "-qam", "harmless base")
+        base = self.git("rev-parse", "HEAD").strip()
+        (self.repo / "target.c").write_text('print("ok")\n# harmless patch\n')
+        self.git("commit", "-qam", "harmless candidate")
+        self.patch_path.write_text(self.git("diff", base, "HEAD"))
+        self.git("checkout", "-q", base)
+        cfg = yaml.safe_load(self.config.read_text())
+        cfg.update(base_commit=base, patched_commit="unused-unresolvable-ref")
+        cfg["build"] = {"release_cmd": "cp target.c {output_dir}/program.py && chmod +x {output_dir}/program.py",
+                        "sanitized_cmd": "cp target.c {output_dir}/program.py && chmod +x {output_dir}/program.py",
+                        "release_binary": "program.py", "sanitized_binary": "program.py"}
+        cfg["execution"] = {"cmd_template": f"{shlex.quote(sys.executable)} {{binary}} {{input_file}}"}
+        self.config.write_text(yaml.safe_dump(cfg))
+        (self.root / "harmless.input").write_text("harmless input\n")
+        cases = [{"name": category, "category": category, "input_file": "harmless.input",
+                  "expected_exit_code": 0, "expected_stdout": "ok\n"}
+                 for category in ("valid", "boundary", "invalid", "exploit")]
+        cases[-1]["expected_error_type"] = "fixture-not-reproduced"
+        self.manifest.write_text(json.dumps({"test_cases": cases}))
+        proc = subprocess.run([sys.executable, "-m", "src", "-c", str(self.config),
+                               "--patch", str(self.patch_path), "-o", str(self.output)],
+                              cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 40, proc.stderr)
+        report = json.loads((self.output / "report.json").read_text())
+        self.assertEqual(report["exit_code"], 40)
+        self.assertEqual(len(report["builds"]), 4)
+        self.assertTrue(all(build["success"] for build in report["builds"].values()))
+        for mode in report["results"].values():
+            self.assertEqual(set(mode), {case["name"] for case in cases})
+            self.assertTrue(all(runs[0]["exit_code"] == 0 for runs in mode.values()))
+        self.assertEqual(report["findings"][-1]["category"], "Inconclusive")
+        self.assertEqual((self.repo / "untracked.txt").read_text(), "preserve me")
 
 
 if __name__ == "__main__":

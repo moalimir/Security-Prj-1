@@ -289,12 +289,18 @@ class PatchValidator:
 def main(argv=None) -> int:
     parser = ArgumentParser(prog="patch-validator", description=__doc__)
     parser.add_argument("--config", "-c", required=True, help="Target YAML configuration.")
+    parser.add_argument("--patch", help="Evaluate this patch against the configured base in an isolated clone.")
     parser.add_argument("--output-dir", "-o", default="./reports", help="Reports, builds, and regression workspace.")
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--skip-minimize", action="store_true")
     parser.add_argument("--skip-hardening", action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(message)s")
+    if args.patch is not None:
+        from src.unseen_patch import evaluate
+
+        return evaluate(args.config, args.output_dir, patch_file=args.patch,
+                        skip_minimize=args.skip_minimize, skip_hardening=args.skip_hardening)
     return PatchValidator(args.config, args.output_dir, skip_minimize=args.skip_minimize,
                           skip_hardening=args.skip_hardening).run()
 
