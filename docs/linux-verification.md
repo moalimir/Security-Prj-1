@@ -1,5 +1,8 @@
 # Linux evidence — 2026-11-15
 
+> Historical record or implementation plan. For current verification limits,
+> remaining work, and instructor approval, see [Project status](project-status.md).
+
 **The Rosetta release startup conflict is resolved, and full validator verdicts (0, 10, 20)
 are established across all seven target scenarios.** Complete measured evidence is preserved
 in `reports/container_verified/`. Earlier intermediate measurements remain in

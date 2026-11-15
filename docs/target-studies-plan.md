@@ -1,5 +1,8 @@
 # Target study implementation
 
+> Historical record or implementation plan. For current verification limits,
+> remaining work, and instructor approval, see [Project status](project-status.md).
+
 The requested deliverable is two independent C targets with genuine source
 revisions: vulnerable base, complete fix, incomplete fix, and functional
 regression. Keep the validator unchanged; it must infer outcomes from execution.

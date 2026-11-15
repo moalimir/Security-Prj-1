@@ -17,3 +17,6 @@ incomplete version must still fail the nested exploit under ASan. The
 regression version must reject the valid empty-object boundary. These are
 observed behavior checks; the validator has no patch-name shortcuts.
 Instructor approval of these reference expectations remains pending.
+
+Instructor approval of this study and its reference expectations is **not recorded**.
+See the [shared approval status](../../docs/project-status.md#instructor-approval-not-recorded) for scope and required evidence.

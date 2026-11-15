@@ -1,5 +1,8 @@
 # Target verification — 2026-11-15
 
+> Historical record or implementation plan. For current verification limits,
+> remaining work, and instructor approval, see [Project status](project-status.md).
+
 Verified on native macOS ARM64 with Python 3.12.12 and Apple Clang. This records
 source/revision completion and native behavior; it does not claim Linux ELF or
 instructor approval.

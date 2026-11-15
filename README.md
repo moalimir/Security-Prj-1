@@ -17,7 +17,9 @@ Native tests exercise the security and regression behavior. Complete Linux
 x86_64 validator evidence across all seven target scenarios (verdicts 0, 10, 20),
 including ELF hardening inspection, recorded 3-run replays, and regression
 reloads, is saved under `reports/container_verified/`. Instructor approval and
-CI verification of the final source revision remain pending.
+CI verification of the final source revision remain outstanding. The authoritative
+[project status](docs/project-status.md) distinguishes implementation, current
+checks, historical evidence, and approval that is not recorded.
 The guarded Rosetta compatibility fix and full container measurements are recorded
 in [`docs/linux-verification.md`](docs/linux-verification.md). See
 [`docs/course-checklist.md`](docs/course-checklist.md).

@@ -1,12 +1,16 @@
 # Foundation verification — 2026-11-10
 
+> Historical record or implementation plan. For current verification limits,
+> remaining work, and instructor approval, see [Project status](project-status.md).
+
 Verified locally on macOS ARM64 with Python 3.12.12 and the installed Clang.
 
 - `python -m unittest discover -s tests -v`: **27 tests passed**.
 - Editable package installation and the `patch-validator` console entry point work.
 - Real C fixture CLI runs, invoked from `/tmp` with absolute config paths:
   correct **40** (mandatory ELF check skipped), incomplete **10**, functional
-  regression **20**. The complete Linux PASS path remains for container verification.
+  regression **20**. At this assessment, the Linux PASS path had not been verified. Later measurements
+  are recorded in [Linux verification](linux-verification.md).
 - Missing configuration/commit, invalid oracle, and partial build checks return
   **30**. Unreproduced baseline and timeout checks return **40**.
 - Unclassified signal-only stops remain **40**; unexpected internal tool errors
@@ -33,7 +37,7 @@ and `reports/regression/`. Their hardening check is explicitly skipped because
 native macOS executables are not ELF.
 
 **Not run:** Docker image build, container execution, GitHub-hosted CI, or real
-cJSON/TLV studies. Docker CLI is installed but cannot connect to its daemon in
-this workspace. The workflow includes Linux x86_64 container verification; its
-actual remote result is still pending. The final course work is tracked in
+cJSON/TLV studies. At that assessment, the Docker CLI could not connect to its
+daemon and the remote CI result was pending. Current evidence is linked above.
+The final course work is tracked in
 `docs/course-checklist.md`.

@@ -54,3 +54,6 @@ Build directly with `make -C examples/targets/tlv_parser/base release` or
 `sanitized`. Both use Clang; release hardening flags are platform-aware, while
 sanitized builds enable ASan/UBSan and preserve source-symbolized stacks.
 Run `python -m unittest tests.test_tlv_target -v` for the focused checks.
+
+Instructor approval of this study and its reference expectations is **not recorded**.
+See the [shared approval status](../../../docs/project-status.md#instructor-approval-not-recorded) for scope and required evidence.

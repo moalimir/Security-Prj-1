@@ -1,5 +1,8 @@
 # Foundation completion
 
+> Historical record or implementation plan. For current verification limits,
+> remaining work, and instructor approval, see [Project status](project-status.md).
+
 The university brief in `project1.txt` (matching the six-page PDF) is the
 specification. This work completes the reusable pipeline and development setup;
 it does not supply the team's two approved final target studies.

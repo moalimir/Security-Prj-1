@@ -9,3 +9,6 @@ packet must exit `1` with empty stdout on the correct revision. The baseline
 must produce ASan `heap-buffer-overflow` on both exploit cases. The incomplete
 revision must still crash on the nested bypass. The regression revision must
 reject empty and 16-byte labels that the independent protocol permits.
+
+Instructor approval of this study and its reference expectations is **not recorded**.
+See the [shared approval status](../../docs/project-status.md#instructor-approval-not-recorded) for scope and required evidence.

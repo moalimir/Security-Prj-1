@@ -25,3 +25,6 @@ The validator reads these repositories without changing their checkouts.
 Generated targets remain ignored by the outer project; distribute the tracked
 templates, patches and preparer to reproduce them. Instructor approval and
 Linux x86_64 ELF evidence are separate from source preparation.
+
+Instructor approval of this study and its reference expectations is **not recorded**.
+See the [shared approval status](../docs/project-status.md#instructor-approval-not-recorded) for scope and required evidence.

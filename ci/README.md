@@ -75,3 +75,11 @@ checkout with the original oracle files available. The evaluated config records
 the temporary repository used during execution; the replay config points at the
 persistent repository location created by the recorded restore command.
 Saved reproducer binaries work independently of that temporary source tree.
+
+Current verification results and their limits are recorded in
+[Project status](../docs/project-status.md). Unit discovery includes the eight
+unmocked CLI integration tests in `tests/test_unseen_patch_integration.py` and
+the independent JSON-status/failure-path checks in `tests/test_report_statuses.py`.
+The CLI fixtures compile harmless C programs that print synthetic diagnostics.
+Every current validator report contains `security_status`, `functionality_status`,
+and boolean `analysis_complete`; see the [JSON contract](../README.md#reports-replay-and-regression-inputs).

@@ -68,3 +68,6 @@ Preparation refuses to overwrite existing targets. Run it once, or pass a fresh
 enabled should exit 0; incomplete and regression comparisons should exit 10
 and 20 respectively. Instructor approval of target/oracle selection remains
 a separate course requirement.
+
+Instructor approval of this study and its reference expectations is **not recorded**.
+See the [shared approval status](../../../docs/project-status.md#instructor-approval-not-recorded) for scope and required evidence.

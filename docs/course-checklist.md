@@ -1,5 +1,8 @@
 # Remaining university deliverables
 
+See [Project status](project-status.md) for current evidence and the approval record.
+Checked items below describe implemented capabilities or dated evidence, not full-grade certification.
+
 The target source/revision work and saved Linux scenarios are implemented.
 Instructor approval, final-revision verification, and submission packaging remain:
 
@@ -8,7 +11,7 @@ Instructor approval, final-revision verification, and submission packaging remai
   complete: real cJSON 1.7.17 and the independent original TLV program. ELF
   builds and patched release/sanitizer functional executions are measured using
   the guarded Rosetta memory policy. See [Linux evidence](linux-verification.md).
-- [ ] Instructor-approved targets, source provenance, patch provenance, harness
+- [ ] Instructor approval recorded for targets, source provenance, patch provenance, harness
   interfaces, independent reference tests, and expected outcomes.
 - [x] For **each target**, exact vulnerable, correct, incomplete, and functional
   regression revisions, with drivers present in the selected revisions.
@@ -30,10 +33,10 @@ Instructor approval, final-revision verification, and submission packaging remai
   revisions, patches, tests, evidence, pipeline, and run instructions.
   Offline target reconstruction exists; package Git-ignored reports and
   reproducers separately and verify the resulting submission.
-- [ ] Actual contribution records for all four members and preparation for
-  individual explanation, result analysis, and a small live code/config change.
 - [x] Evaluation on unseen patches without hardcoding patch names or identifiers.
-  Turnkey CLI `--patch` and `tools/eval_unseen_patch.py` verified with unit tests.
+  Both CLI entry points have unmocked integration coverage for all five exits,
+  line insertions, caller changes, mixed findings, and argument inputs. Harmless
+  compiled fixtures emit synthetic diagnostics; they do not validate ASan itself.
   Full real-target patch-file integration on the final revision remains to verify.
 
 The demo tags `base`, `correct`, `incomplete`, and `regression` only create
