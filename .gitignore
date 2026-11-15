@@ -1,0 +1,15 @@
+.venv/
+.demo/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.DS_Store
+/reports/*
+!/reports/.gitkeep
+/reproducers/*
+!/reproducers/.gitkeep
+/targets/*
+!/targets/README.md

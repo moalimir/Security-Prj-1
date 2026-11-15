@@ -1,0 +1,3 @@
+pyyaml>=6.0,<7
+pyelftools>=0.29,<1
+unidiff>=0.7,<2
