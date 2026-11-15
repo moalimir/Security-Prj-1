@@ -41,6 +41,9 @@ class PipelineTests(unittest.TestCase):
                 self.assertTrue(metadata)
                 bundle = json.loads(metadata[0].read_text())
                 self.assertEqual(len(bundle["original_executions"]["base_sanitized"]), 3)
+                for run in bundle["original_executions"]["base_sanitized"]:
+                    self.assertGreater(run["exit_code"], 0)
+                    self.assertIsNone(run["signal"])
                 self.assertTrue(bundle["minimized_replays"])
                 self.assertEqual(len(bundle["minimized_executions"]), 4)
                 self.assertTrue(list((output / "regression").glob("*/oracle_manifest.json")))

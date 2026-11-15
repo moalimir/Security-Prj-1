@@ -85,7 +85,8 @@ class TestRunner:
         env["LC_ALL"] = "C"
         if build_type == "sanitized":
             # RLIMIT_AS cannot cap ASan's multi-terabyte shadow mappings.
-            env["ASAN_OPTIONS"] = ("detect_leaks=0:abort_on_error=1:symbolize=1:"
+            # Exit on errors so host core collectors cannot delay termination.
+            env["ASAN_OPTIONS"] = ("detect_leaks=0:abort_on_error=0:symbolize=1:"
                                    f"hard_rss_limit_mb={self._config.execution.memory_limit_mb}")
             env["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
         return env
