@@ -119,8 +119,9 @@ LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) \
   docker compose -f docker/docker-compose.yml up --build --abort-on-container-exit --exit-code-from patch-validator
 ```
 
-To run a real target, mount `targets`, `tests`, and `configs` read-only in addition
-to the writable reports directory. Compose already supplies these mounts; override
+To run a real target, mount `targets`, `tests`, and `configs` read-only, with
+the configured regression directories and reports directory mounted writable.
+Compose already supplies these mounts; override
 its command with `docker compose ... run --rm patch-validator --config
 configs/cjson_correct.yaml --output-dir /workspace/reports`. Prepare host targets
 first when using Compose's bind mounts. Configurations and build commands are trusted
@@ -293,11 +294,17 @@ same-site reproducer. The search is bounded at 200 attempts and reports its
 attempt count and status. This is a practical bounded reducer, not a guarantee
 of a globally smallest input.
 
-Generated exploit regression manifests are stored **under the writable output
-directory**, leaving mounted input suites read-only. Reuse the output directory
-to reload them automatically. Optional `test_suites.regression_dir` loads an
-additional `oracle_manifest.json` if present. Arbitrary files without an oracle
-are not assigned invented expected behavior.
+Generated exploit regression manifests are copied into both the report directory
+and optional `test_suites.regression_dir`. The configured directory must exist
+and be writable; it is loaded on subsequent runs even with a fresh report or
+repository path. Identical copies are deduplicated; conflicting names or inputs
+are configuration errors. Without a configured directory, reuse the report
+directory to retain cases. Arbitrary files without an oracle are not assigned
+invented expected behavior.
+
+CI restores these target corpora from its latest available branch-scoped cache,
+saves them after a successful job, and includes them in uploaded artifacts.
+Commit reviewed regression files for permanent retention: caches may be evicted.
 
 Replay with the project installed (same OS/architecture and compatible runtime):
 

@@ -14,6 +14,14 @@ jobs:
           cache: pip
       - run: pip install -e .
       - run: python -m unittest discover -s tests -v
+      - name: Restore and retain generated target regressions
+        uses: actions/cache@v4
+        with:
+          path: |
+            tests/cjson/regression
+            tests/tlv_parser/regression
+          key: target-regressions-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: target-regressions-${{ runner.os }}-
       - name: Build Linux x86_64 validator
         run: docker build --platform linux/amd64 -t patch-validator -f docker/Dockerfile .
       - name: Check demo container verdicts
@@ -46,6 +54,8 @@ jobs:
               --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
               --user "$(id -u):$(id -g)" \
               -v "$PWD/reports/$variant:/workspace/reports:rw" \
+              -v "$PWD/tests/cjson/regression:/workspace/tests/cjson/regression:rw" \
+              -v "$PWD/tests/tlv_parser/regression:/workspace/tests/tlv_parser/regression:rw" \
               patch-validator --config "configs/$variant.yaml" -o /workspace/reports
             status=$?
             set -e
@@ -62,11 +72,15 @@ jobs:
               --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
               --user "$(id -u):$(id -g)" \
               -v "$PWD/reports/$variant:/workspace/reports:rw" \
+              -v "$PWD/tests/cjson/regression:/workspace/tests/cjson/regression:rw" \
+              -v "$PWD/tests/tlv_parser/regression:/workspace/tests/tlv_parser/regression:rw" \
               --entrypoint python patch-validator ci/check_reports.py replay /workspace/reports
             docker run --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
               --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
               --user "$(id -u):$(id -g)" \
               -v "$PWD/reports/$variant:/workspace/reports:rw" \
+              -v "$PWD/tests/cjson/regression:/workspace/tests/cjson/regression:rw" \
+              -v "$PWD/tests/tlv_parser/regression:/workspace/tests/tlv_parser/regression:rw" \
               patch-validator --config "configs/$variant.yaml" -o /workspace/reports
             python ci/check_reports.py report "reports/$variant" --expected-exit 0 --regression-loaded
           done
@@ -74,5 +88,8 @@ jobs:
         if: always()
         with:
           name: validation-reports
-          path: reports/
+          path: |
+            reports/
+            tests/cjson/regression/
+            tests/tlv_parser/regression/
           if-no-files-found: warn

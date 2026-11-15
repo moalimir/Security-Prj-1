@@ -87,19 +87,25 @@ class PatchValidator:
         self.regression_dir = self.workspace / "regression" / repo_key
         manifests = {self.regression_dir / "oracle_manifest.json"}
         configured_regression = self.config.test_suites.regression_dir
+        self.persistent_regression_dir = Path(configured_regression) if configured_regression else self.regression_dir
         if configured_regression:
             directory = Path(configured_regression)
             if not directory.is_dir():
                 raise ConfigError(f"Regression directory does not exist: {directory}")
             manifests.add(directory / "oracle_manifest.json")
-        names = {case["name"] for case in self.cases}
+        names = {case["name"]: case for case in self.cases}
         for manifest in sorted(manifests):
             if manifest.is_file():
                 for case in load_oracle(manifest):
                     if case["name"] in names:
-                        raise ConfigError(f"Duplicate test name across oracle/regression manifests: {case['name']}")
+                        previous = names[case["name"]]
+                        if ({k: v for k, v in case.items() if k != "input_path"}
+                                != {k: v for k, v in previous.items() if k != "input_path"}
+                                or Path(case["input_path"]).read_bytes() != Path(previous["input_path"]).read_bytes()):
+                            raise ConfigError(f"Duplicate test name across oracle/regression manifests: {case['name']}")
+                        continue
                     self.cases.append(case)
-                    names.add(case["name"])
+                    names[case["name"]] = case
         self.runner = TestRunner(self.config)
         self.builds = {}
         engine = BuildEngine(self.config, self.workspace / "build")
@@ -272,18 +278,19 @@ class PatchValidator:
             self._save_regression(case, data)
 
     def _save_regression(self, case, data):
-        self.regression_dir.mkdir(parents=True, exist_ok=True)
         digest = hashlib.sha256(data + case["expected_error_type"].encode()).hexdigest()
         name = f"regression_{digest[:20]}"
-        path = self.regression_dir / "oracle_manifest.json"
-        entries = load_oracle(path) if path.exists() else []
-        if name in {c["name"] for c in entries}:
-            return
-        (self.regression_dir / f"{name}.input").write_bytes(data)
-        entry = {k: v for k, v in case.items() if k != "input_path"}
-        entry.update(name=name, input_file=f"{name}.input", generated_from=case["name"])
-        entries.append(entry)
-        write_json(path, {"test_cases": [{k: v for k, v in e.items() if k != "input_path"} for e in entries]})
+        for directory in {self.regression_dir, self.persistent_regression_dir}:
+            directory.mkdir(parents=True, exist_ok=True)
+            path = directory / "oracle_manifest.json"
+            entries = load_oracle(path) if path.exists() else []
+            if name in {c["name"] for c in entries}:
+                continue
+            (directory / f"{name}.input").write_bytes(data)
+            entry = {k: v for k, v in case.items() if k != "input_path"}
+            entry.update(name=name, input_file=f"{name}.input", generated_from=case.get("generated_from", case["name"]))
+            entries.append(entry)
+            write_json(path, {"test_cases": [{k: v for k, v in e.items() if k != "input_path"} for e in entries]})
 
 
 def main(argv=None) -> int:

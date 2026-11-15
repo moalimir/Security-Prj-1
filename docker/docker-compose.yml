@@ -10,6 +10,8 @@ services:
       - ../reports:/workspace/reports:rw
       - ../targets:/workspace/targets:ro
       - ../tests:/workspace/tests:ro
+      - ../tests/cjson/regression:/workspace/tests/cjson/regression:rw
+      - ../tests/tlv_parser/regression:/workspace/tests/tlv_parser/regression:rw
       - ../configs:/workspace/configs:ro
     mem_limit: 2g
     cpus: 2

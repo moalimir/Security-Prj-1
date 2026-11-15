@@ -14,10 +14,14 @@ scenarios:
 
 Every target container uses `--platform linux/amd64 --network none --memory 2g
 --cpus 2 --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges`, with
-only its report directory bind mounted writable. Runtime needs no downloads:
+its report directory and the two target regression corpora bind mounted writable.
+Runtime needs no downloads:
 the image prepares both target Git repositories during the build. Hardening and
 minimization are enabled. Report directories are uploaded even after a failed
-workflow step.
+workflow step, together with generated target corpora. A branch-scoped Actions
+cache restores corpora into fresh checkouts and saves updates after successful
+jobs. Reviewed cases should also be committed for permanent retention; cache
+availability is not guaranteed.
 
 `python ci/check_reports.py report reports/tlv_correct --expected-exit 0` checks
 all four builds, all four result sets, report files, completed analysis, native
@@ -35,9 +39,9 @@ does not mean every replay CLI exits 0.
 CI then validates each correct scenario a second time using the same mounted
 output directory. `ci/check_reports.py report ... --expected-exit 0
 --regression-loaded` requires every generated regression entry to appear in
-findings and in execution results for **all four binaries**. Reusing the output
-directory is necessary because its repository-keyed manifest is loaded at the
-start of the next run.
+findings and in execution results for **all four binaries**. The configured
+project corpus is also populated and loaded independently of the report path;
+identical project/report copies do not execute twice.
 
 The unseen-patch defense command is:
 
