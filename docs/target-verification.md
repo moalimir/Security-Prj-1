@@ -26,7 +26,8 @@ instructor approval.
 
 ## Executed checks
 
-`python -m unittest discover -s tests -v`: **44 tests run, 43 passed, 1 skipped**
+Historical `python -m unittest discover -s tests -v` result before subsequent
+implementation changes: **44 tests run, 43 passed, 1 skipped**
 (the Linux ELF-only hardening check). The new target checks build all four core
 revisions of both programs in release and ASan/UBSan modes: **16 successful
 archived builds**. They verify complete-fix behavior, original exploits,
@@ -71,12 +72,17 @@ binary hashes, diffs and human-readable reports are in `reports/targets_native/`
 
 `docker compose -f docker/docker-compose.yml config --quiet` also passes.
 
-## Pending checks
+## Container verification and exit-0 evidence
 
 The native correct verdicts are **40**, because mandatory ELF hardening was
-explicitly skipped. Subsequent partial [Linux verification](linux-verification.md)
-measured ELF builds, hardening, and patched release/sanitizer functional outcomes
-with Docker running. A guarded memory policy resolves the initial Rosetta release
-mapping failures; full validator exit-0 evidence and hosted CI remain pending. Instructor approval of
-targets, harnesses and oracles is also pending. The old pinned cJSON baseline deliberately retains the studied
-vulnerability; this study is not a claim of overall library security.
+explicitly skipped on macOS Mach-O binaries. In Linux container execution,
+complete validator verdicts (**0**, **10**, **20**) and ELF hardening have been
+verified across all seven target scenarios under `reports/container_verified/`.
+A guarded memory policy resolves the initial Rosetta release mapping failures.
+See [Linux verification](linux-verification.md). The tracked
+`.github/workflows/validate.yml` defines all seven scenarios and replay/reload
+checks for both correct targets; final-revision CI verification remains pending.
+
+Instructor approval of targets, harnesses and oracles remains a course deliverable.
+The old pinned cJSON baseline deliberately retains the studied vulnerability;
+this study is not a claim of overall library security.

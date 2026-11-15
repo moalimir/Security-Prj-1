@@ -13,9 +13,12 @@ reproducers/regression cases, and writes JSON, Markdown, and HTML reports.
 `correct`, `incomplete`, and `regression` Git revisions. cJSON uses the actual
 upstream 1.7.17 library and issue #800 fix; TLV is an independent original C
 program. Run `python tools/prepare_targets.py` once to prepare both offline.
-Native tests exercise the security and regression behavior. Instructor approval
-and complete Linux x86_64 validator evidence remain separate requirements. Partial
-ELF/hardening measurements and the guarded Rosetta compatibility fix are recorded
+Native tests exercise the security and regression behavior. Complete Linux
+x86_64 validator evidence across all seven target scenarios (verdicts 0, 10, 20),
+including ELF hardening inspection, recorded 3-run replays, and regression
+reloads, is saved under `reports/container_verified/`. Instructor approval and
+CI verification of the final source revision remain pending.
+The guarded Rosetta compatibility fix and full container measurements are recorded
 in [`docs/linux-verification.md`](docs/linux-verification.md). See
 [`docs/course-checklist.md`](docs/course-checklist.md).
 The measured native target results are in
@@ -37,8 +40,8 @@ python -m src --config .demo/correct.yaml --output-dir reports/demo --skip-harde
 
 The final command exits **40** because ELF hardening was explicitly skipped;
 its test findings are all `Fixed`. The expected verdict for a complete Linux
-container run is **0**; that full validator verdict is still pending. Partial
-Linux build/hardening and patched functional checks have been measured.
+container run is **0**, verified in container execution with complete ELF hardening
+and preserved under `reports/container_verified/` (see [`docs/linux-verification.md`](docs/linux-verification.md)).
 The local fixture
 repository is created under `.demo/`; the preparer refuses to overwrite a
 nonempty destination. For a new fixture use `--output-dir PATH`.

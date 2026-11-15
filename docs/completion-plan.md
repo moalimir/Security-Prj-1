@@ -7,20 +7,20 @@
 
 | Category | Done | Remaining |
 |---|---|---|
-| Pipeline Engine (14 modules) | ✅ 100% | — |
-| Target 1 — cJSON 1.7.17 | ✅ 95% | Instructor approval + Linux ELF run |
-| Target 2 — TLV Parser | ✅ 95% | Instructor approval + Linux ELF run |
+| Pipeline Engine | Implemented | Correctness gaps and final-revision verification remain |
+| Target 1 — cJSON 1.7.17 | Source and Linux scenario evidence complete | Instructor approval |
+| Target 2 — TLV Parser | Source and Linux scenario evidence complete | Instructor approval |
 | Test Suites (20 + 24 cases) | ✅ 100% | — |
 | Native pipeline runs (exit 10/20) | ✅ 100% | — |
-| Linux/ELF container run (exit 0) | 🟡 ELF, hardening, patched release/sanitizer checks measured | **Item 1 — full validator verdict pending** |
-| CI for real targets | ✅ 100% | Waiting on actual CI run to pass |
+| Linux/ELF container run (exit 0) | ✅ 100% | All 7 target container scenarios verified (exits 0, 10, 20), replays verified, regressions reloaded |
+| CI for real targets | Passed at `82e90a2` | Verify the final source revision |
 | Instructor approval | ⏳ 0% | **Item 2 — blocking** |
 | Contribution records | ⏳ 0% | Item 3 |
 | Defense preparation | ⏳ 5% | Item 4 |
 
 ---
 
-## ✅ Completed — Nothing More Needed Here
+## Implemented Components and Recorded Evidence
 
 ### Core Pipeline Engine (`src/`)
 
@@ -69,7 +69,7 @@
 
 | Suite | Total Cases | Coverage |
 |---|---|---|
-| `tests/cjson/` | **20 cases** | valid (6) · boundary (5) · invalid (5) · exploit (2) |
+| `tests/cjson/` | **20 cases** | valid (6) · boundary (6) · invalid (6) · exploit (2) |
 | `tests/tlv_parser/` | **24 cases** | valid (6) · boundary (5) · invalid (11) · exploit (2) |
 | Oracle independence | ✅ | cJSON oracles cross-checked with Python `json`; TLV oracles from written protocol spec |
 
@@ -84,7 +84,7 @@
 | `tlv_incomplete` | **10** ✅ | 23 Fixed + **1 IncompleteFix** | bypass_poc still overflows |
 | `tlv_regression` | **20** ✅ | 22 Fixed + **2 FunctionalRegression** | empty + max-label rejected |
 
-> Exit 40 on `correct` scenarios is expected on macOS — ELF hardening is mandatory and was explicitly skipped because macOS produces Mach-O, not ELF. A complete Linux run is expected to produce exit **0**, but that verdict has not been established. See [partial Linux evidence](linux-verification.md).
+> Exit 40 on `correct` scenarios is expected on macOS: ELF hardening was explicitly skipped because macOS produces Mach-O. Saved complete Linux target runs establish exit **0**; see [Linux evidence](linux-verification.md).
 
 ### Reproducer Bundles & Regression Reload
 
@@ -95,27 +95,24 @@
 
 ### Test Suite (Python)
 
-**Last full native run before the Linux diagnostic fix: `44 tests, 43 passed, 1 skipped — OK`** (run with `.venv`, 2026-11-15). Focused verification of the new fix is recorded in [Linux evidence](linux-verification.md); the full suite was not rerun.
-
-| Test file | Tests | Status |
-|---|---|---|
-| `test_foundation.py` | 11 | ✅ All pass |
-| `test_pipeline.py` | ~6 | ✅ All pass |
-| `test_analysis.py` | ~8 | ✅ All pass |
-| `test_build_and_diff.py` | ~5 | ✅ All pass |
-| `test_prepared_targets.py` | ~6 | ✅ All pass |
-| `test_tlv_target.py` | ~4 | ✅ All pass |
-| `test_unseen_patch.py` | 10 | ✅ Focused checks pass |
-| Linux ELF hardening test | 1 | ⏭️ Skipped (macOS) |
+The 2026-11-15 assessment, before the cross-revision error-matching fix,
+discovered **57 tests** and ran **41 framework tests, all passing**: foundation,
+analysis, build/diff, reports, and unseen-patch handling. It did not rerun the
+full C/Docker suites. The earlier full native result of **44 tests, 43 passed,
+1 skipped** is historical, not a result for the current suite.
 
 ### CI Workflow (`.github/workflows/validate.yml`)
 
-- ✅ Runs all 44 unit tests on `ubuntu-24.04`
+- ✅ Runs unit-test discovery on `ubuntu-24.04`
 - ✅ Builds Docker image for `linux/amd64` with targets baked in
 - ✅ Checks all 3 demo scenarios (exit 0/10/20)
 - ✅ Checks all 7 real target scenarios: `cjson_correct:0`, `cjson_incomplete:10`, `cjson_regression:20`, `tlv_correct:0`, `tlv_incomplete:10`, `tlv_regression:20`, `tlv_hardening_warn:0`
 - ✅ Replays bundles and reloads generated regression cases inside the container
 - ✅ Uploads all reports as artifacts
+
+[Hosted run 43708073445](https://github.com/moalimir/Security-Prj-1/actions/runs/43708073445)
+passed these steps at commit `82e90a2`. Later implementation changes require
+a new run against the final submitted revision.
 
 ### Unseen-Patch Evaluation (`patch-validator --patch`)
 
@@ -134,38 +131,30 @@
 
 ---
 
-## 🔴 Remaining — 4 Actionable Items
+## Final Assessment Tasks
 
-### Item 1 · Linux/ELF Container Run  🔴 HIGHEST PRIORITY
+### Item 1 · Saved Linux/ELF Container Evidence (2026-11-15)
 
-**Effort:** ~2 hours | **Blocker for:** exit-0 verdicts, ELF hardening evidence
+Saved Linux x86_64 reports cover all seven target scenarios. The assessment
+rechecked their contracts with `ci/check_reports.py`, bundled binary hashes,
+and recorded three-run replay counts. These saved records do not establish
+that later source changes have passed the full container suite.
 
-**Status — partially verified, 2026-11-15:** Docker is running. A fresh image
-build failed on a Docker Hub TLS handshake, so defensive checks used the cached
-amd64 runtime with the current workspace mounted read-only. The measured
-results and reproduction command are in [Linux verification](linux-verification.md).
+| Target & Scenario | Config File | Container Exit Code | Verification Status |
+|---|---|:---:|---|
+| cJSON Correct Patch | `configs/cjson_correct.yaml` | **0** | All 20 tests Fixed, ELF hardening Full, replays verified, regressions reloaded (22 Fixed) |
+| cJSON Incomplete Patch | `configs/cjson_incomplete.yaml` | **10** | `bypass_poc.json` detected as IncompleteFix |
+| cJSON Regression Patch | `configs/cjson_regression.yaml` | **20** | `boundary_empty_object` detected as FunctionalRegression |
+| TLV Correct Patch | `configs/tlv_correct.yaml` | **0** | All 24 tests Fixed, ELF hardening Full, replays verified, regressions reloaded (26 Fixed) |
+| TLV Incomplete Patch | `configs/tlv_incomplete.yaml` | **10** | `bypass_poc.bin` detected as IncompleteFix |
+| TLV Regression Patch | `configs/tlv_regression.yaml` | **20** | `boundary_empty_label` & `boundary_max_label_16` detected as FunctionalRegression |
+| TLV Hardening Warning | `configs/tlv_hardening_warn.yaml` | **0** | Exit 0 with detected canary & RELRO reductions |
 
-- 12 release/sanitizer ELF64 x86_64 builds succeeded across `cjson_correct`,
-  `tlv_correct`, and `tlv_hardening_warn`.
-- Static inspection confirmed full RELRO, NX, PIE, canary, and Fortify symbols
-  on both correct comparisons; the weak TLV variant lost canary and full RELRO,
-  and both reductions were detected.
-- All 124 patched release/sanitizer functional checks now pass. The runner
-  recognizes Linux x86_64 `VirtualApple` and omits the release address-space cap
-  only with a verified finite cgroup v2 memory bound (2 GiB here). Native Linux
-  retains its configured cap; ASan retains its RSS setting. Execution records
-  include the selected memory policy.
-- 26 native and 27 focused Linux tests pass. The three initial Linux foundation
-  failures now pass with the compatibility path; original failure logs remain.
+Evidence is stored in `reports/container_verified/`. The tracked
+`.github/workflows/validate.yml` defines all seven scenarios and replay/reload
+checks for both correct targets. Run it against the final submitted revision.
 
-**Still pending:** the full validator exit-0 evidence, baseline exploit/bypass
-executions, incomplete/regression verdicts, replay/minimization/regression reload,
-and hosted CI. Native Linux cap selection is unit-tested; execution on native
-x86_64 hardware remains unmeasured. The Rosetta release path uses the finite
-container memory allowance in place of the process virtual-address cap. PASS
-criteria are preserved.
-
-Latest evidence is retained in `reports/linux/rosetta-compatibility/`; earlier
+Earlier partial evidence is retained in `reports/linux/rosetta-compatibility/`;
 failure results remain in `reports/linux/defensive/`. These partial files are separate from full validator
 reports and do not assign a validator exit code. Keep them separately with the
 submission because `reports/` is Git-ignored.
@@ -174,7 +163,7 @@ submission because `reports/` is Git-ignored.
 
 ### Item 2 · Formal Instructor Approval  🔴 HIGH PRIORITY
 
-**Effort:** ~1 hour to write, then scheduling | **Blocker for:** any score at all
+**Effort:** ~1 hour to write, then scheduling | **Requirement:** design-stage approval
 
 Submit via email or course system. Use the provenance docs already in the repo:
 
@@ -195,10 +184,10 @@ Target 1: cJSON 1.7.17 (Real Non-Toy Library)
 
 Target 2: TLV Protocol Parser (original C implementation)
   Source:    Local original implementation (custom binary format)
-  Vuln:      Unchecked 2-byte record length field copied to fixed heap buffer
+  Vuln:      Unchecked 1-byte record length field copied to fixed heap buffer
              (heap-buffer-overflow, ASan confirmed)
   Fix:       Bounds check: reject records where length exceeds safe limit
-  Incomplete variant: guard with off-by-one; larger records bypass
+  Incomplete variant: top-level guard leaves nested labels unchecked
   Regression variant: correct fix plus rejection of zero-length and max-size labels
   Oracle:    Written TLV v1 protocol spec (examples/targets/tlv_parser/README.md)
   Input:     file mode (.bin files)
@@ -274,7 +263,8 @@ patch-validator --config configs/cjson_correct.yaml \
 | Docker + CI workflow | ✅ Complete |
 | Native evidence — exit 10 & 20 (`reports/targets_native/`) | ✅ Complete |
 | Unseen-patch evaluation tool | ✅ Complete |
-| **Linux ELF evidence — exit 0 (`reports/linux/`)** | 🟡 **Partial — ELF/hardening measured; full exit 0 pending (Item 1)** |
+| **Linux ELF evidence — exit 0 (`reports/container_verified/`)** | Saved complete scenario evidence; final-revision CI pending |
+| **Submission archive with reports and reproducers** | TODO — evidence directories are Git-ignored |
 | **Instructor written approval** | ⏳ **TODO — Item 2** |
 | Run instructions (`README.md`) | ✅ Complete |
 | **Team contribution records (`docs/contributions.md`)** | ⏳ **TODO — Item 3** |
@@ -287,7 +277,7 @@ patch-validator --config configs/cjson_correct.yaml \
 ```bash
 cd /path/to/Project && source .venv/bin/activate
 
-# Full test suite (should be: 44 run, 43 passed, 1 skipped)
+# Full test suite; report the actual count and any platform skips
 python -m unittest discover -s tests -v
 
 # Quick native scenario check

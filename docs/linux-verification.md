@@ -1,9 +1,9 @@
 # Linux evidence — 2026-11-15
 
-**The Rosetta release startup conflict is fixed; a full validator exit 0 has not
-been established.** Latest measurements are in `reports/linux/rosetta-compatibility/`;
-earlier failure evidence remains in `reports/linux/defensive/`. These are build,
-hardening, and patched functional checks, not complete patch-validation reports.
+**The Rosetta release startup conflict is resolved, and full validator verdicts (0, 10, 20)
+are established across all seven target scenarios.** Complete measured evidence is preserved
+in `reports/container_verified/`. Earlier intermediate measurements remain in
+`reports/linux/rosetta-compatibility/` and failure logs in `reports/linux/defensive/`.
 
 ## Guarded Rosetta compatibility
 
@@ -140,11 +140,38 @@ docker run --rm --pull never --platform linux/amd64 --network none \
   /project/reports/linux/defensive/collect.py /evidence
 ```
 
-The complete validator verdict remains pending, as do baseline exploit/bypass
-executions, incomplete/regression verdicts, crash replay, minimization,
-generated regression reload, the full test suite, and hosted CI. The native Linux
-cap-selection path is unit-tested; native x86_64 hardware execution has not been
-measured here. Instructor approval is also still pending.
+## Complete validator verification in Linux containers
+
+The updated `patch-validator:latest` Docker image was built for `linux/amd64`
+and verified across all seven target scenarios under strict sandboxed limits
+(`--network none --memory 2g --cpus 2 --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges`).
+The saved reports match the expected scenario verdicts and pass
+`ci/check_reports.py` contract checks:
+
+| Scenario | Config | Container exit | Findings & Evidence |
+| --- | --- | :---: | --- |
+| `cjson_correct` | `configs/cjson_correct.yaml` | **0** | All 20 tests Fixed; Full RELRO/NX/PIE/Canary/Fortify verified; 3-run replays pass; regression reload reaches 22 Fixed |
+| `cjson_incomplete` | `configs/cjson_incomplete.yaml` | **10** | `bypass_poc.json` detected as IncompleteFix |
+| `cjson_regression` | `configs/cjson_regression.yaml` | **20** | `boundary_empty_object` detected as FunctionalRegression |
+| `tlv_correct` | `configs/tlv_correct.yaml` | **0** | All 24 tests Fixed; Full RELRO/NX/PIE/Canary verified; 3-run replays pass; regression reload reaches 26 Fixed |
+| `tlv_incomplete` | `configs/tlv_incomplete.yaml` | **10** | `bypass_poc.bin` detected as IncompleteFix |
+| `tlv_regression` | `configs/tlv_regression.yaml` | **20** | `boundary_empty_label` & `boundary_max_label_16` detected as FunctionalRegression |
+| `tlv_hardening_warn` | `configs/tlv_hardening_warn.yaml` | **0** | Canary & RELRO reductions detected and warned (`--expect-hardening-warning`) |
+
+Replays inside the container confirm baseline crashes on `base_sanitized` and
+clean oracle exits on `patched_sanitized --minimized`. Second-run executions
+confirm that generated regression tests reload automatically.
+
+All seven scenario evidence directories are stored in `reports/container_verified/`.
+Their report contracts, bundled binary hashes, and recorded three-run replay
+counts were rechecked during the repository assessment without re-executing
+the target errors. The tracked `.github/workflows/validate.yml` defines all
+seven scenarios and replay/reload checks for both correct targets.
+
+[Hosted run 43708073445](https://github.com/moalimir/Security-Prj-1/actions/runs/43708073445)
+passed at commit `82e90a2`. It predates later implementation changes, so a new
+run against the final submitted revision is required. Instructor approval
+remains pending.
 
 `reports/` remains Git-ignored by project convention; retain the evidence
 directory separately with the submission. A source checkout alone does not
