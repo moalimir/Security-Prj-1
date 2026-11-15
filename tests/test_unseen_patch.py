@@ -128,7 +128,7 @@ class UnseenPatchTests(unittest.TestCase):
                 eval_unseen_patch.main(self.args(*candidate))
             self.assertEqual(result.exception.code, 30)
 
-    def test_main_cli_evaluates_the_submitted_patch_and_returns_standard_verdicts(self):
+    def test_main_cli_forwards_validator_verdicts_and_skip_options(self):
         def validate(config, output, **options):
             cfg = yaml.safe_load(config.read_text())
             clone = Path(cfg["repository_path"])
