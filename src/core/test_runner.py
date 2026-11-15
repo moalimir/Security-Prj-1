@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import platform
 import re
 import resource
 import shlex
@@ -11,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from src.core.config_manager import ProjectConfig
@@ -52,6 +53,7 @@ class TestResult:
     duration_ms: float = 0
     stdout_hash: str = ""
     resource_limited: bool = False
+    memory_limits: dict = field(default_factory=dict)
 
     @property
     def crashed(self) -> bool:
@@ -91,11 +93,36 @@ class TestRunner:
             env["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
         return env
 
+    def memory_limits(self, build_type: str) -> dict:
+        linux = sys.platform.startswith("linux")
+        rosetta, cgroup_limit = False, None
+        if linux:
+            try:
+                cpuinfo = Path("/proc/cpuinfo").read_text(encoding="ascii")
+                rosetta = platform.machine() == "x86_64" and bool(re.search(
+                    r"^vendor_id\s*:\s*VirtualApple\s*$", cpuinfo, re.M))
+            except (OSError, UnicodeError):
+                pass
+            try:
+                value = int(Path("/sys/fs/cgroup/memory.max").read_text(encoding="ascii").strip())
+                cgroup_limit = value if value > 0 else None
+            except (OSError, ValueError):
+                pass
+        cap = self._config.execution.memory_limit_mb * 1024 * 1024 if linux and build_type == "release" else None
+        # Rosetta's mappings exceed the process cap; require a finite outer limit.
+        if rosetta and cgroup_limit is not None:
+            cap = None
+        return {"configured_memory_limit_mb": self._config.execution.memory_limit_mb,
+                "rlimit_as_bytes": cap,
+                "asan_rss_limit_mb": self._config.execution.memory_limit_mb if build_type == "sanitized" else None,
+                "cgroup_memory_max_bytes": cgroup_limit, "rosetta_detected": rosetta}
+
     def run_single_test(self, binary_path: Path, input_path: Path, build_type: str) -> TestResult:
         binary_path, input_path = Path(binary_path).resolve(), Path(input_path).resolve()
         if not binary_path.is_file() or not input_path.is_file():
             raise TestExecutionError(f"Missing binary or input: {binary_path}, {input_path}")
         cfg = self._config.execution
+        memory_limits = self.memory_limits(build_type)
         try:
             cmd = self.command(binary_path, input_path)
             stdin_data = input_path.read_bytes() if cfg.input_mode == "stdin" else None
@@ -105,8 +132,8 @@ class TestRunner:
         def limits():
             resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
             resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 * 1024, 16 * 1024 * 1024))
-            if sys.platform.startswith("linux") and build_type == "release":
-                cap = cfg.memory_limit_mb * 1024 * 1024
+            if memory_limits["rlimit_as_bytes"] is not None:
+                cap = memory_limits["rlimit_as_bytes"]
                 resource.setrlimit(resource.RLIMIT_AS, (cap, cap))
 
         start = time.monotonic()
@@ -141,7 +168,8 @@ class TestRunner:
         report = self._parse_asan_output(stderr)
         resource_limited = (not timed_out and (output_limited or sig in ("SIGKILL", "SIGXFSZ") or bool(re.search(
             r"(failed to (?:mmap|allocate)|out of memory|rss limit exhausted|ReserveShadowMemoryRange failed|"
-            r"Shadow memory range interleaves|ASan runtime does not come first)", stderr, re.I))))
+            r"Shadow memory range interleaves|ASan runtime does not come first|"
+            r"rosetta error: mmap_anonymous_rw mmap failed)", stderr, re.I))))
         error_type = mechanism = None
         if timed_out:
             error_type, mechanism = "timeout", "timeout"
@@ -156,7 +184,7 @@ class TestRunner:
         return TestResult(input_path.stem, input_path, exit_code, sig, stdout, stderr,
                           timed_out, False, build_type, error_type, mechanism, report,
                           (time.monotonic() - start) * 1000,
-                          stdout_hash, resource_limited)
+                          stdout_hash, resource_limited, memory_limits=memory_limits)
 
     def run_test_suite(self, binary_path: Path, test_dir: Path, build_type: str) -> list[TestResult]:
         if not test_dir.is_dir():
