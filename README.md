@@ -306,13 +306,17 @@ separate output directories to retain separate experiment reports.
 
 Minimization uses byte deletion and preserves the observed error type and source
 site. When a fixed test is shrunk, its patched oracle behavior must also hold.
+For a newly observed error on a valid, boundary, or invalid case, reduction must
+preserve the independent baseline oracle in both build modes. The generated
+case retains its original category, exit code, and output expectations; its
+`observed_error_type` records the diagnostic without requiring a baseline crash.
 The original input is always retained; the minimized input is replayed three
 times against all four binaries. Unstable or unsymbolized crashes are bundled without claiming a minimized
 same-site reproducer. The search is bounded at 200 attempts and reports its
 attempt count and status. This is a practical bounded reducer, not a guarantee
 of a globally smallest input.
 
-Generated exploit regression manifests are copied into both the report directory
+Generated regression manifests are copied into both the report directory
 and optional `test_suites.regression_dir`. The configured directory must exist
 and be writable; it is loaded on subsequent runs even with a fresh report or
 repository path. Identical copies are deduplicated; conflicting names or inputs
@@ -321,7 +325,7 @@ directory to retain cases. Arbitrary files without an oracle are not assigned
 invented expected behavior.
 
 CI restores these target corpora from its latest available branch-scoped cache,
-saves them after a successful job, and includes them in uploaded artifacts.
+saves updates even after validation fails, and includes them in uploaded artifacts.
 Commit reviewed regression files for permanent retention: caches may be evicted.
 
 Replay with the project installed (same OS/architecture and compatible runtime):

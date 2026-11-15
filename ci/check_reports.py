@@ -62,11 +62,16 @@ def check_replays(directory):
             assert process.stdout, (command, process.returncode, process.stderr)
             result = json.loads(process.stdout)
             assert not result["timed_out"] and not result["resource_limited"], result
-            if label == "base_sanitized":
+            oracle = metadata["oracle"]
+            reference = metadata["original_executions"][label][0]
+            expected_error = (oracle["expected_error_type"]
+                              if label == "base_sanitized" and oracle["category"] == "exploit"
+                              else reference["error_type"])
+            if expected_error:
                 assert process.returncode != 0, result
-                assert result["error_type"] == metadata["oracle"]["expected_error_type"], result
+                assert result["error_type"] == expected_error, result
+                assert result["detection_mechanism"] == reference["detection_mechanism"], result
             else:
-                oracle = metadata["oracle"]
                 assert process.returncode == oracle["expected_exit_code"], result
                 assert not result["error_type"] and result["signal"] is None, result
                 if "expected_stdout" in oracle:

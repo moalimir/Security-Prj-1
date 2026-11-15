@@ -1,5 +1,6 @@
 """Regression corpus persistence using harmless programs and synthetic findings."""
 import json
+from dataclasses import replace
 from pathlib import Path
 import shlex
 import shutil
@@ -7,11 +8,15 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import yaml
 
 from src.core.oracle import load_oracle
+from src.core.test_runner import TestRunner
+from src.modules.classifier import Finding
+from src.modules.report_generator import json_default
 from src.orchestrator import PatchValidator
 
 
@@ -81,7 +86,6 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(first.run(), 30)
         self.assertIn("Duplicate test name", first.report["errors"][0])
 
-
     def test_corpus_write_failures_return_30_and_persist_failure_reports(self):
         from src.modules.report_generator import write_json
 
@@ -115,6 +119,67 @@ class RegressionTests(unittest.TestCase):
                 self.assertIn("Cannot save regression corpus", report["errors"][0])
                 self.assertFalse(report.get("analysis_complete", False))
                 self.assertFalse((self.corpus / "oracle_manifest.json").exists())
+
+    def test_new_issues_generate_oracle_preserving_cases_and_replay_checks(self):
+        from ci.check_reports import check_replays
+
+        (self.root / "input").write_bytes(b"prefix!suffix")
+        generated_names = set()
+        for category in ("valid", "boundary", "invalid"):
+            validator = self.run_validator(f"new {category}")
+            case = next(case for case in validator.cases if case["name"] == category)
+            clean = validator.runs["base_sanitized"][category][0]
+            diagnostic = TestRunner._parse_asan_output(
+                "ERROR: AddressSanitizer: heap-buffer-overflow\n#0 0x123 in parse /fixture/source/parser.c:8:1\n")
+            crash = replace(clean, exit_code=1, error_type=diagnostic.error_type,
+                            detection_mechanism="sanitizer", sanitizer_report=diagnostic)
+            for label in validator.runs:
+                validator.runs[label][category] *= 3
+            validator.runs["patched_sanitized"][category] = [crash] * 3
+
+            def execute(binary, input_path, mode):
+                if binary == validator.builds["patched_sanitized"].binary_path:
+                    return crash
+                return replace(clean, build_type=mode,
+                               stdout="ok\n" if b"!" in input_path.read_bytes() else "different output\n")
+
+            with patch.object(validator.runner, "run_single_test", side_effect=execute):
+                validator._bundle(case, Finding(category, "NewIssue", "synthetic diagnostic"))
+            manifest = self.corpus / "oracle_manifest.json"
+            self.assertTrue(manifest.is_file(), "NewIssue was not added to the project corpus")
+            generated = next(entry for entry in load_oracle(manifest) if entry["category"] == category)
+            self.assertEqual(Path(generated["input_path"]).read_bytes(), b"!")
+            self.assertEqual(generated["expected_stdout"], case["expected_stdout"])
+            self.assertEqual(generated["expected_exit_code"], case["expected_exit_code"])
+            self.assertNotIn("expected_error_type", generated)
+            generated_names.add(generated["name"])
+
+            def replay(command, **options):
+                label = command[command.index("--build") + 1]
+                result = crash if label == "patched_sanitized" else clean
+                return SimpleNamespace(stdout=json.dumps(result, default=json_default),
+                                       stderr="", returncode=result.exit_code)
+
+            with patch("ci.check_reports.subprocess.run", side_effect=replay):
+                check_replays(validator.workspace)
+        self.assertEqual(len(generated_names), 3, "Distinct oracle contracts must not collide")
+        fixed = self.run_validator("fixed patch fresh workspace")
+        findings = {finding.test_name: finding.category for finding in fixed.findings}
+        self.assertTrue(all(findings[name] == "Fixed" for name in generated_names))
+
+    def test_unstable_new_issue_is_bundled_without_publishing_a_regression(self):
+        validator = self.run_validator("unstable")
+        clean = validator.runs["patched_sanitized"]["valid"][0]
+        diagnostic = TestRunner._parse_asan_output(
+            "ERROR: AddressSanitizer: heap-buffer-overflow\n#0 0x123 in parse /fixture/source/parser.c:8:1\n")
+        crash = replace(clean, exit_code=1, error_type=diagnostic.error_type,
+                        detection_mechanism="sanitizer", sanitizer_report=diagnostic)
+        validator.runs["patched_sanitized"]["valid"] = [crash, clean, crash]
+        case = next(case for case in validator.cases if case["name"] == "valid")
+        finding = Finding("valid", "Inconclusive", "unstable diagnostic")
+        validator._bundle(case, finding)
+        self.assertTrue(Path(finding.reproducer_path).is_dir())
+        self.assertFalse((self.corpus / "oracle_manifest.json").exists())
 
 
 if __name__ == "__main__":

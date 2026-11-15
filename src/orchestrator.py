@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import logging
 import shutil
 import sys
@@ -218,6 +219,9 @@ class PatchValidator:
                     if self.runs[label][name][0].crashed]
         if not crashing:
             return
+        new_issue = finding.category == "NewIssue" and case["category"] != "exploit"
+        if new_issue:
+            crashing.sort(key=lambda label: not label.startswith("patched_"))
         bundle = self.workspace / "reproducers" / name
         bundle.mkdir(parents=True, exist_ok=True)
         original = Path(case["input_path"]).read_bytes()
@@ -238,6 +242,10 @@ class PatchValidator:
                     patched = self.builds[f"patched_{reference.build_type}"]
                     result = self.runner.run_single_test(patched.binary_path, candidate_path, reference.build_type)
                     return matches_oracle(result, case)
+                if new_issue:
+                    return all(matches_oracle(self.runner.run_single_test(
+                        self.builds[f"base_{mode}"].binary_path, candidate_path, mode), case)
+                        for mode in ("release", "sanitized"))
                 return True
             data, attempts = minimize(original, predicate)
             status = "minimized" if len(data) < len(original) else "unchanged"
@@ -255,9 +263,12 @@ class PatchValidator:
             status = "unstable-minimized"
         if minimized_runs and not all(self._stable(runs) for runs in minimized_runs.values()):
             status = "unstable-minimized"
-        if finding.category == "Fixed" and minimized_runs and not all(
+        oracle_side = "patched" if finding.category == "Fixed" else None
+        if new_issue and data != original:
+            oracle_side = "base"
+        if oracle_side and minimized_runs and not all(
             matches_oracle(result, case) for label, runs in minimized_runs.items()
-            if label.startswith("patched_") for result in runs):
+            if label.startswith(f"{oracle_side}_") for result in runs):
             status = "minimized-oracle-mismatch"
         if status in ("unstable-minimized", "minimized-oracle-mismatch", "no-symbolized-site", "unstable-original"):
             self.analysis_incomplete = True
@@ -285,13 +296,20 @@ class PatchValidator:
             path.chmod(0o755)
         write_json(bundle / "metadata.json", metadata)
         finding.reproducer_path = str(bundle)
-        if (stable and checks and status not in ("unstable-minimized", "minimized-oracle-mismatch", "skipped", "no-symbolized-site")
-                and case["category"] == "exploit" and chosen.startswith("base_")
-                and reference.error_type == case["expected_error_type"]):
-            self._save_regression(case, data)
+        if (stable and checks and status in ("minimized", "unchanged")
+                and ((case["category"] == "exploit" and chosen.startswith("base_")
+                      and reference.error_type == case["expected_error_type"])
+                     or (new_issue and chosen.startswith("patched_")))):
+            self._save_regression(case, data, error_type=reference.error_type)
 
-    def _save_regression(self, case, data):
-        digest = hashlib.sha256(data + case["expected_error_type"].encode()).hexdigest()
+    def _save_regression(self, case, data, *, error_type=None):
+        if case["category"] == "exploit":
+            identity = data + case["expected_error_type"].encode()
+        else:
+            identity = json.dumps({"input_hash": hashlib.sha256(data).hexdigest(), "error_type": error_type,
+                                   "oracle": {k: v for k, v in case.items()
+                                              if k == "category" or k.startswith("expected_")}}, sort_keys=True).encode()
+        digest = hashlib.sha256(identity).hexdigest()
         name = f"regression_{digest[:20]}"
         for directory in {self.regression_dir, self.persistent_regression_dir}:
             try:
@@ -303,6 +321,8 @@ class PatchValidator:
                 (directory / f"{name}.input").write_bytes(data)
                 entry = {k: v for k, v in case.items() if k != "input_path"}
                 entry.update(name=name, input_file=f"{name}.input", generated_from=case.get("generated_from", case["name"]))
+                if case["category"] != "exploit":
+                    entry["observed_error_type"] = error_type
                 entries.append(entry)
                 write_json(path, {"test_cases": [{k: v for k, v in e.items() if k != "input_path"} for e in entries]})
             except OSError as exc:

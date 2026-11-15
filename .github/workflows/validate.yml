@@ -14,8 +14,9 @@ jobs:
           cache: pip
       - run: pip install -e .
       - run: python -m unittest discover -s tests -v
-      - name: Restore and retain generated target regressions
-        uses: actions/cache@v4
+      - name: Restore generated target regressions
+        id: regressions
+        uses: actions/cache/restore@v4
         with:
           path: |
             tests/cjson/regression
@@ -84,6 +85,14 @@ jobs:
               patch-validator --config "configs/$variant.yaml" -o /workspace/reports
             python ci/check_reports.py report "reports/$variant" --expected-exit 0 --regression-loaded
           done
+      - name: Retain generated target regressions even after validation fails
+        if: always() && steps.regressions.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            tests/cjson/regression
+            tests/tlv_parser/regression
+          key: ${{ steps.regressions.outputs.cache-primary-key }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

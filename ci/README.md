@@ -19,8 +19,8 @@ Runtime needs no downloads:
 the image prepares both target Git repositories during the build. Hardening and
 minimization are enabled. Report directories are uploaded even after a failed
 workflow step, together with generated target corpora. A branch-scoped Actions
-cache restores corpora into fresh checkouts and saves updates after successful
-jobs. Reviewed cases should also be committed for permanent retention; cache
+cache restores corpora into fresh checkouts and saves updates even when
+validation fails. Reviewed cases should also be committed for permanent retention; cache
 availability is not guaranteed.
 
 `python ci/check_reports.py report reports/tlv_correct --expected-exit 0` checks
@@ -35,6 +35,12 @@ inside the image. A baseline sanitizer crash must return nonzero and match the
 oracle's error type. The patched program must satisfy the independent oracle:
 malformed exploit input is safely **rejected with exit 1**, so replay success
 does not mean every replay CLI exits 0.
+
+For bundles from newly observed errors on functional or invalid inputs, replay
+checks the recorded error type and detection mechanism on the affected build.
+Clean executions must satisfy the independent oracle. Generated cases retain
+their original input category and oracle, so a subsequent correct patch can pass
+them without reproducing an error in the baseline.
 
 CI then validates each correct scenario a second time using the same mounted
 output directory. `ci/check_reports.py report ... --expected-exit 0
