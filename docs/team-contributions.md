@@ -11,12 +11,12 @@ scope declared for each member, including design, implementation, tests, result
 analysis, and technical documentation. These shares do not determine individual
 defense grades.
 
-| Contributor | Member | Assigned section | Share |
-| --- | --- | --- | --- |
-| 1 | Mahan Rezai | Secure build environment and dynamic execution | 25% |
-| 2 | Alireza Asgarian | Patch analysis and security verdicts | 25% |
-| 3 | Alireza Mosallanezhad | Reproducibility, minimization, and regression testing | 25% |
-| 4 | Mohammad Ali Mirzayi | Binary security assessment, security reporting, and CI verification | 25% |
+| Contributor | Member                | Assigned section                                                    | Share |
+| ----------- | --------------------- | ------------------------------------------------------------------- | ----- |
+| 1           | Mahan Rezai           | Secure build environment and dynamic execution                      | 25%   |
+| 2           | Alireza Asgarian      | Patch analysis and security verdicts                                | 25%   |
+| 3           | Alireza Mosallanezhad | Reproducibility, minimization, and regression testing               | 25%   |
+| 4           | Mohammad Ali Mirzayi  | Binary security assessment, security reporting, and CI verification | 25%   |
 
 ### 1. Mahan Rezai — Secure build environment and dynamic execution
 
@@ -108,36 +108,9 @@ not invent commit attribution or individual test-run records. Participation is
 assessed using attributable output, development evidence, and individual defense,
 not commit counts or lines of code alone.
 
-| Member | Declared contribution scope |
-| --- | --- |
-| Mahan Rezai | Secure builds, configuration, execution, isolation, and target build/input integration; associated tests, analysis, and documentation (section 1). |
-| Alireza Asgarian | Diff correlation, error classification, verdicts, unseen-patch evaluation, and patch-scenario review; associated tests, analysis, and documentation (section 2). |
-| Alireza Mosallanezhad | Oracles/corpora, replay stability, reproducer bundles, minimization, and regression persistence; associated tests, analysis, and documentation (section 3). |
-| Mohammad Ali Mirzayi | ELF protections, security reports, CI checks/artifacts, and submission verification; associated tests, analysis, and documentation (section 4). |
-
-## Individual defense requirements
-
-Every member must understand the overall architecture and their assigned code.
-Defense is individual, without help from teammates or answer-generating tools.
-
-| Assessment | Points |
-| --- | --- |
-| Explain architecture, design choices, and assigned code logic | 3 |
-| Analyze a finding/test result and connect evidence to the tool's decision | 3 |
-| Make a limited code/configuration change and test its effect within the defense time | 4 |
-
-Eligibility requires effective participation, at least 5/10 overall, and at
-least 1 point in each category. Failure to meet these conditions gives that
-member a zero project grade, regardless of the team's technical result.
-For eligible members, the assignment defines:
-
-`Individual grade = 2.5 × (team technical score / 100) × (individual defense score / 10)`
-
-Language-model assistance is allowed during project work, but each member
-remains responsible for understanding, checking, and defending their output.
-
-Include this statement with the final submission.
-Use the [course checklist](course-checklist.md) for required
-technical artifacts and the [project status](project-status.md) for verification
-and instructor-approval status. The contribution statement does not certify
-completion of outstanding technical verification or submission packaging.
+| Member                | Declared contribution scope                                                                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mahan Rezai           | Secure builds, configuration, execution, isolation, and target build/input integration; associated tests, analysis, and documentation (section 1).               |
+| Alireza Asgarian      | Diff correlation, error classification, verdicts, unseen-patch evaluation, and patch-scenario review; associated tests, analysis, and documentation (section 2). |
+| Alireza Mosallanezhad | Oracles/corpora, replay stability, reproducer bundles, minimization, and regression persistence; associated tests, analysis, and documentation (section 3).      |
+| Mohammad Ali Mirzayi  | ELF protections, security reports, CI checks/artifacts, and submission verification; associated tests, analysis, and documentation (section 4).                  |
