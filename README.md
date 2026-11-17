@@ -249,9 +249,10 @@ location without ASLR addresses. A changed source line may yield a new signature
 inspect the reported frames/diff before claiming a common root cause. Signal-only
 errors retain their observed signal and do not claim an inferred memory subtype.
 
-Diff correlation reports changed-line overlap, weaker same-function evidence,
-or `unknown`. Each match retains the stack frame number and its crash/caller
-role, for example `same_function (caller frame #1: parse_object)`. Markdown and
+Diff correlation reports `changed_line` when a symbolized frame overlaps a
+changed line in the corresponding source version. An association based only on
+a Git hunk header is `unknown`. Each match retains the stack frame number and
+role, for example `changed_line (caller frame #1: parse_object)`. Markdown and
 HTML show this evidence separately for each mode and binary, including source
 locations and the limitation that association does not prove causation.
 Later stack sequences whose frame numbers restart are labeled `auxiliary`

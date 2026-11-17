@@ -29,8 +29,13 @@ def check_report(directory, expected, regression_loaded=False, hardening_warning
         assert report["results"][label], label
     for side in ("base", "patched"):
         assert report["hardening"][side]["status"] == "checked", report["hardening"]
-    assert any(finding["correlation"]["base_sanitized"]["status"] in ("changed_line", "same_function")
-               for finding in report["findings"]), "No symbolized baseline crash associated with the patch"
+    assert report["findings"], "No findings recorded"
+    for finding in report["findings"]:
+        for label in BUILDS:
+            correlation = finding["correlation"][label]
+            evidence = correlation["evidence"]
+            assert all(match["status"] == "changed_line" for match in evidence), (label, correlation)
+            assert correlation["status"] == ("changed_line" if evidence else "unknown"), (label, correlation)
     if hardening_warning:
         base, patched = report["hardening"]["base"], report["hardening"]["patched"]
         assert base["canary"] is True and patched["canary"] is False, report["hardening"]

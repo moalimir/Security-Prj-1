@@ -86,7 +86,7 @@ class ReportStatusTests(unittest.TestCase):
                 self.assertEqual(report["functionality_status"], functionality)
                 self.assertIs(report["analysis_complete"], complete)
 
-    def test_ci_rejects_exit_zero_without_both_pass_statuses_and_complete_analysis(self):
+    def test_ci_checks_pass_consistency_and_correlation_evidence(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             for name in ("report.md", "report.html", "patch.diff"):
@@ -98,7 +98,8 @@ class ReportStatusTests(unittest.TestCase):
                 "builds": {label: {"success": True} for label in BUILDS},
                 "results": {label: {"fixture": [{"exit_code": 0}]} for label in BUILDS},
                 "hardening": {side: {"status": "checked"} for side in ("base", "patched")},
-                "findings": [{"correlation": {"base_sanitized": {"status": "changed_line"}}}],
+                "findings": [{"correlation": {label: {"status": "unknown", "evidence": []}
+                                              for label in BUILDS}}],
             }
             path.write_text(json.dumps(report))
             check_report(directory, 0)
@@ -106,6 +107,18 @@ class ReportStatusTests(unittest.TestCase):
                                  ("analysis_complete", False), ("analysis_complete", "false")):
                 with self.subTest(field=field, value=value):
                     path.write_text(json.dumps({**report, field: value}))
+                    with self.assertRaises(AssertionError):
+                        check_report(directory, 0)
+            correlation = report["findings"][0]["correlation"]
+            correlation["base_sanitized"] = {"status": "changed_line", "evidence": [{"status": "changed_line"}]}
+            path.write_text(json.dumps(report))
+            check_report(directory, 0)
+            for value in ({"status": "same_function", "evidence": [{"status": "same_function"}]},
+                          {"status": "changed_line", "evidence": []},
+                          {"status": "unknown", "evidence": [{"status": "changed_line"}]}):
+                with self.subTest(correlation=value):
+                    correlation["base_sanitized"] = value
+                    path.write_text(json.dumps(report))
                     with self.assertRaises(AssertionError):
                         check_report(directory, 0)
 

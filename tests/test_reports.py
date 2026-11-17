@@ -121,8 +121,8 @@ class ReportTests(unittest.TestCase):
     def test_correlation_is_visible_with_frame_role_and_uncertainty(self):
         data = self.fixture()
         data["findings"][0].correlation = {
-            "base_sanitized": {"status": "same_function", "evidence": [
-                {"status": "same_function", "frame_id": 1, "frame_role": "caller",
+            "base_sanitized": {"status": "changed_line", "evidence": [
+                {"status": "changed_line", "frame_id": 1, "frame_role": "caller",
                  "function": "parse_object", "file": "parser.c", "line": 12}],
                 "limitation": "Association is not proof of causation."},
             "patched_sanitized": {"status": "changed_line", "evidence": [
@@ -136,7 +136,7 @@ class ReportTests(unittest.TestCase):
             ReportGenerator(root).generate(data)
             for suffix in ("md", "html"):
                 text = (root / f"report.{suffix}").read_text().split("<details>", 1)[0]
-                for value in ("Diff Correlation", "same_function (caller frame #1: parse_object)",
+                for value in ("Diff Correlation", "changed_line (caller frame #1: parse_object)",
                               "changed_line (crash frame #0: parse_string)", "parser.c:12",
                               "unknown", "No symbolized frames.", "Association is not proof of causation."):
                     self.assertIn(value.replace("_", r"\_") if suffix == "md" else value, text)

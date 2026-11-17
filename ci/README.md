@@ -25,7 +25,8 @@ availability is not guaranteed.
 
 `python ci/check_reports.py report reports/tlv_correct --expected-exit 0` checks
 all four builds, all four result sets, report files, completed analysis, native
-ELF inspection, and a symbolized baseline stack associated with the patch.
+ELF inspection, and the correlation records for every finding. It accepts
+`unknown` when a build has no changed-line evidence.
 Add `--expect-hardening-warning` for the warning scenario.
 
 For each correct scenario, CI runs the saved original input against the bundled

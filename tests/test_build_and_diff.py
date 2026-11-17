@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.core.build_engine import BuildEngine
 from src.core.config_manager import BuildConfig, ExecConfig, ProjectConfig, TestConfig
-from src.core.test_runner import SanitizerReport, StackFrame, TestResult, TestRunner
+from src.core.test_runner import SanitizerReport, StackFrame, TestResult
 
 
 def git(repo, *args):
@@ -53,18 +53,24 @@ class BuildTests(unittest.TestCase):
             git(root, "config", "user.name", "Fixture")
             git(root, "config", "user.email", "fixture@example.invalid")
             source = root / "parser.c"
-            source.write_text("int parse(int n) {\n  return n;\n}\n")
+            original = "int alpha(void) {\n    return 0;\n}\n\nint beta(void) {\n    return 1;\n}\n"
+            source.write_text(original)
             git(root, "add", ".")
             git(root, "commit", "-qm", "base")
             base = git(root, "rev-parse", "HEAD")
-            source.write_text("int parse(int n) {\n  return n + 1;\n}\n")
+            source.write_text(original.replace("return 1;", "return 2;"))
             git(root, "commit", "-qam", "patch")
             analyzer = DiffAnalyzer(root)
             report = analyzer.analyze(base, "HEAD")
-            frames = TestRunner._parse_asan_output(
-                f"ERROR: AddressSanitizer: heap-buffer-overflow\n#0 0x123 in parse {source}:2:1\n").stack_frames
-            correlation = analyzer.correlate(frames, report, "patched", root)
-            self.assertEqual(correlation["status"], "changed_line")
+            self.assertIn("alpha", report["files"][0]["hunks"][0]["context"])
+            for side in ("base", "patched"):
+                with self.subTest(side=side):
+                    unchanged = StackFrame(0, "alpha", str(source), 2, "0x123")
+                    changed = StackFrame(0, "beta", str(source), 6, "0x456")
+                    correlation = analyzer.correlate([unchanged], report, side, root)
+                    self.assertEqual(correlation["status"], "unknown")
+                    self.assertEqual(correlation["evidence"], [])
+                    self.assertEqual(analyzer.correlate([changed], report, side, root)["status"], "changed_line")
             self.assertEqual(analyzer.correlate([], report, "base", root)["status"], "unknown")
 
     def test_non_elf_hardening_is_unknown(self):
@@ -142,14 +148,12 @@ class BuildTests(unittest.TestCase):
         diff = {"files": [{"base_path": "parser.c", "patched_path": "parser.c", "hunks": [
             {"context": "int parse_object(int n)", "base_lines": [8], "patched_lines": [9]}]}]}
         frames = [StackFrame(0, "parse_string", str(root / "parser.c"), 3, "0x123"),
-                  StackFrame(1, "parse_object", str(root / "parser.c"), 12, "0x456")]
-        for side in ("base", "patched"):
-            with self.subTest(side=side):
-                correlation = DiffAnalyzer.correlate(frames, diff, side, root)
-                self.assertEqual(correlation["status"], "same_function")
-                evidence, = correlation["evidence"]
-                self.assertEqual((evidence["frame_id"], evidence["frame_role"]), (1, "caller"))
-                self.assertEqual(evidence["function"], "parse_object")
+                  StackFrame(1, "parse_object", str(root / "parser.c"), 8, "0x456")]
+        correlation = DiffAnalyzer.correlate(frames, diff, "base", root)
+        self.assertEqual(correlation["status"], "changed_line")
+        evidence, = correlation["evidence"]
+        self.assertEqual((evidence["frame_id"], evidence["frame_role"]), (1, "caller"))
+        self.assertEqual(evidence["function"], "parse_object")
         frames[0] = StackFrame(0, "parse_string", str(root / "parser.c"), 9, "0x123")
         evidence = DiffAnalyzer.correlate(frames, diff, "patched", root)["evidence"][0]
         self.assertEqual(evidence["status"], "changed_line")
@@ -161,8 +165,8 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(DiffAnalyzer.correlate(frames[1:], diff, "base", root)["status"], "unknown")
         # ASan can append allocation/free stacks with frame numbers starting over.
         frames = [StackFrame(0, "parse_string", "parser.c", 3, "0x123"),
-                  StackFrame(1, "parse_object", "parser.c", 12, "0x456"),
-                  StackFrame(0, "parse_object", "parser.c", 12, "0x789")]
+                  StackFrame(1, "parse_object", "parser.c", 8, "0x456"),
+                  StackFrame(0, "parse_object", "parser.c", 8, "0x789")]
         evidence = DiffAnalyzer.correlate(frames, diff, "base", root)["evidence"]
         self.assertEqual([e["frame_role"] for e in evidence], ["caller", "auxiliary"])
 

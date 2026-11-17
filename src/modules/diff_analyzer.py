@@ -1,5 +1,4 @@
-"""Correlate symbolized execution frames with changed source lines/functions."""
-import re
+"""Correlate symbolized execution frames with changed source lines."""
 import subprocess
 from pathlib import Path
 
@@ -82,9 +81,6 @@ class DiffAnalyzer:
                     if frame.line_number in hunk[f"{side}_lines"]:
                         matches.append({"status": "changed_line", "file": str(path),
                                         "line": frame.line_number, "function": frame.function_name, **frame_evidence})
-                    elif re.search(r"\b" + re.escape(frame.function_name) + r"\s*\(", hunk["context"]):
-                        matches.append({"status": "same_function", "file": str(path),
-                                        "line": frame.line_number, "function": frame.function_name, **frame_evidence})
-        status = "changed_line" if any(m["status"] == "changed_line" for m in matches) else "same_function" if matches else "unknown"
+        status = "changed_line" if matches else "unknown"
         return {"status": status, "evidence": matches,
                 "limitation": "Runtime location overlap is evidence of association, not proof of causation; caller effects may be unknown."}
