@@ -14,7 +14,7 @@ as recorded below. Individual defense remains separately assessed.
 | New errors | Valid/boundary/invalid discoveries retain their original oracle during reduction and reload (`5cc7a15`) | Unstable discoveries retain bundles without publishing a regression. |
 | Unseen patches | Eight real CLI integration tests cover exits 0/10/20/30/40, insertions, callers, mixed findings, and literal/empty arguments (`c95d581`) | Harmless compiled fixtures print synthetic diagnostics; these checks do not validate ASan itself or every unseen patch. |
 | JSON contract | Independent security/functionality statuses and an always-present completion boolean (`05a8e9f`) | Conclusions apply to configured tests; incomplete checks cannot establish a full pass. |
-| Current framework checks | 76 focused native and restricted Linux x86_64 tests pass, including submission-tool regressions | Synthetic diagnostic fixtures verify infrastructure behavior; the final hosted scenario run remains to verify. |
+| Current framework checks | 76 focused native and restricted Linux x86_64 tests pass, including submission-tool regressions; hosted full test discovery and all seven target scenarios pass at `4bd8974` | Synthetic CLI diagnostics verify infrastructure behavior; defense-day unseen patches remain separately assessed. |
 | Submission archive | All tracked files match the ZIP, including the Persian brief; standard unzip preserves binary permissions and offline preparation restores the pinned revisions | Retain the final revision's hosted reports and regenerate the archive after source or evidence updates. |
 
 The local verification commands are:
@@ -25,20 +25,23 @@ python -m unittest tests.test_analysis tests.test_build_and_diff tests.test_foun
 python -m unittest tests.test_report_statuses tests.test_unseen_patch_integration -q
 ```
 
-Historical Linux reports cover seven real-target scenarios and the correct-target
+Linux reports cover seven real-target scenarios and the correct-target
 replays/reloads. See [Linux evidence](linux-verification.md). Those files live in
-Git-ignored `reports/container_verified/`; a fresh clone does not contain them.
-They predate the recent correctness changes and JSON status contract.
+Git-ignored `reports/container_verified/`; include them in the submission ZIP.
+The current hosted workflow retains equivalent reports and regression corpora
+in its `validation-reports` artifact.
 Locally generated, Git-ignored tutorial HTML/PDF exports also describe an older
 snapshot: their statements that `analysis_complete` can be absent or that the
 README still lacks Linux results are superseded by the current JSON contract and
 this status record. They are not included in the pushed source documentation.
 
-The latest hosted success verified before this documentation update was
-[run 43740093600](https://github.com/moalimir/Security-Prj-1/actions/runs/43740093600)
-at `6ac9ba23950c64708daeb068cf57b006817c9f42`. A successful run on an earlier
-commit does not establish the result of the revision now being pushed. Check the
-new run in GitHub Actions and retain its exact commit and artifacts.
+The implementation revision `4bd89743e3bdea1da268730ffe6e9bcc0e2023bf` passed
+[hosted run 44108086819](https://github.com/moalimir/Security-Prj-1/actions/runs/44108086819)
+on 2026-11-17. Full test discovery, all three demo verdicts, all seven target
+scenarios, hardening warnings, saved replays, and generated regression reloads
+completed successfully. The containers use Docker init to reap orphaned
+subprocesses within the existing 128-process limit. This documentation update
+records that measured result; subsequent commits receive their own CI runs.
 
 ## Instructor approval: confirmed by the team
 
@@ -67,7 +70,7 @@ completed individual defense.
 
 ## Remaining technical/submission work
 
-- Verify the final commit in hosted CI and retain reports and reproducer artifacts.
+- Retain the submitted commit's successful CI run and its reports and reproducer artifacts.
 - Verify real-target patch-file evaluation on the final revision; the compiled
   synthetic fixtures establish infrastructure behavior within their stated scope.
 - Regenerate the verified submission archive after final source or evidence

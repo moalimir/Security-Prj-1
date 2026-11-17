@@ -17,7 +17,8 @@ Native tests exercise the security and regression behavior. Complete Linux
 x86_64 validator evidence across all seven target scenarios (verdicts 0, 10, 20),
 including ELF hardening inspection, recorded 3-run replays, and regression
 reloads, is saved under `reports/container_verified/`. The team confirms instructor
-approval is complete; CI verification of the final source revision remains outstanding. The authoritative
+approval is complete. Hosted CI passed at implementation revision `4bd8974`,
+including full test discovery and all seven target scenarios. The authoritative
 [project status](docs/project-status.md) distinguishes implementation, current
 checks, historical evidence, and team-confirmed approval.
 The guarded Rosetta compatibility fix and full container measurements are recorded

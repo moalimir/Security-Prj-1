@@ -31,9 +31,11 @@ Final-revision verification and submission packaging remain:
   Verified with `ci/check_reports.py replay` and automated reload checks.
 - [x] Linux container ELF hardening evidence and detection of unintended reductions
   (static inspection and complete validator verdicts 0, 10, 20 established).
-- [ ] CI runs for the pinned real targets and retained JSON/human-readable reports.
-  [Run 43740093600](https://github.com/moalimir/Security-Prj-1/actions/runs/43740093600)
-  passed at `6ac9ba2`; verify later changes on the final submitted revision.
+- [x] CI runs for the pinned real targets and retained JSON/human-readable reports.
+  [Run 44108086819](https://github.com/moalimir/Security-Prj-1/actions/runs/44108086819)
+  passed at implementation revision `4bd8974`, including full test discovery,
+  all seven target scenarios, hardening warnings, and replay/reload checks.
+  Subsequent commits receive their own CI runs.
 - [x] An independently reproducible submission containing source, configs,
   revisions, patches, tests, evidence, pipeline, and run instructions.
   Offline target reconstruction exists; `tools/package_submission.py` packages
