@@ -22,7 +22,7 @@ from src.core.test_runner import TestResult, TestRunner
 from src.modules.classifier import Finding, FindingCategory, aggregate_statuses, classify, determine_exit_code, matches_oracle
 from src.modules.diff_analyzer import DiffAnalyzer
 from src.modules.hardening_checker import HardeningChecker
-from src.modules.report_generator import ReportGenerator, write_json
+from src.modules.report_generator import ReportGenerator, new_report, write_json
 from src.modules.testcase_minimizer import minimize
 from src.utils.constants import MAX_REPLAY_COUNT
 from src.utils.exceptions import BuildError, ConfigError, PatchValidatorError
@@ -47,16 +47,11 @@ class PatchValidator:
         self.report = {}
 
     def run(self) -> int:
-        self.findings = []
+        self.report = new_report()
+        self.findings = self.report["findings"]
         self.cases = []
         self.runs = {}
         self.analysis_incomplete = False
-        self.report = {"schema_version": 1, "project": "unresolved", "exit_code": 40,
-                       "security_status": "inconclusive", "functionality_status": "inconclusive",
-                       "analysis_complete": False,
-                       "started_at": datetime.now(timezone.utc).isoformat(),
-                       "warnings": [], "errors": [], "findings": self.findings,
-                       "builds": {}, "results": {}, "hardening": {}, "diff": {}}
         try:
             self._run_pipeline()
         except PatchValidatorError as exc:

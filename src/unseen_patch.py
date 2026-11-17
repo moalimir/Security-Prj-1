@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -14,6 +15,7 @@ import tempfile
 import yaml
 
 from src.core.config_manager import ConfigManager
+from src.modules.report_generator import new_report, write_json
 from src.orchestrator import ArgumentParser
 from src.utils.exceptions import PatchValidatorError
 
@@ -36,22 +38,45 @@ def _run_validator(config: Path, output: Path, *, skip_minimize=False, skip_hard
                           skip_hardening=skip_hardening).run()
 
 
+def _write_failure_report(output: Path, report: dict, *, owns_output: bool) -> Path:
+    with tempfile.TemporaryDirectory(dir=output) as temporary:
+        staged = Path(temporary) / "report.json"
+        write_json(staged, report)
+        if owns_output:
+            path = output / staged.name
+            try:
+                # Publish the complete JSON without replacing an existing report.
+                path.hardlink_to(staged)
+            except OSError:
+                pass
+            else:
+                return path
+        path = Path(tempfile.mkdtemp(prefix="patch-failure-", dir=output)) / staged.name
+        staged.replace(path)
+        return path
+
+
 def evaluate(base_config, output_dir, *, patch_file=None, patched_commit=None,
              skip_minimize=False, skip_hardening=False) -> int:
+    output = Path(output_dir)
+    report = new_report()
+    owns_output = False
     try:
+        output = output.resolve()
+        evidence = output / "unseen"
+        # Reserve the evidence directory before any preparation that can fail.
+        evidence.mkdir(parents=True, exist_ok=False)
+        owns_output = True
         if (patch_file is None) == (patched_commit is None):
             raise ValueError("Supply exactly one patch file or patched commit.")
         base_config = Path(base_config).resolve()
         patch_file = Path(patch_file).resolve() if patch_file is not None else None
         config = ConfigManager.load_config(str(base_config))
+        report["project"] = config.project_name
         source = Path(config.repository_path)
         base = _resolve(source, config.base_commit)
         patched = _resolve(source, patched_commit) if patched_commit is not None else None
         submitted = patch_file.read_bytes() if patch_file is not None else None
-        output = Path(output_dir).resolve()
-        evidence = output / "unseen"
-        # Each evaluation owns its evidence; never replace an earlier submission.
-        evidence.mkdir(parents=True, exist_ok=False)
         with tempfile.TemporaryDirectory(prefix="patch-validator-unseen-") as temporary:
             repository = Path(temporary) / "repository"
             subprocess.run(["git", "clone", "--quiet", "--no-hardlinks", "--no-checkout", "--",
@@ -111,7 +136,15 @@ def evaluate(base_config, output_dir, *, patch_file=None, patched_commit=None,
             return code if code in (0, 10, 20, 30, 40) else 30
     except (OSError, ValueError, PatchValidatorError, subprocess.CalledProcessError) as exc:
         detail = exc.stderr.strip() if isinstance(exc, subprocess.CalledProcessError) and exc.stderr else str(exc)
-        print(f"Cannot evaluate unseen patch: {detail}", file=sys.stderr)
+        message = f"Cannot evaluate unseen patch: {detail}"
+        print(message, file=sys.stderr)
+        report.update(exit_code=30, errors=[message], finished_at=datetime.now(timezone.utc).isoformat())
+        try:
+            path = _write_failure_report(output, report, owns_output=owns_output)
+        except (OSError, ValueError) as report_error:
+            print(f"Cannot write failure report: {report_error}", file=sys.stderr)
+        else:
+            print(f"Failure report: {path}", file=sys.stderr)
         return 30
 
 

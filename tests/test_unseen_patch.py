@@ -1,4 +1,6 @@
 """Exercise unseen-patch isolation with real Git repositories."""
+from contextlib import redirect_stderr
+from io import StringIO
 import json
 from pathlib import Path
 import shlex
@@ -86,10 +88,34 @@ class UnseenPatchTests(unittest.TestCase):
 
     def test_bad_patch_fails_without_running_validator_or_changing_source(self):
         self.patch_path.write_text("not a patch\n")
-        with patch.object(eval_unseen_patch, "_run_validator") as validate:
-            self.assertEqual(eval_unseen_patch.main(self.args("--patch-file", str(self.patch_path))), 30)
-            validate.assert_not_called()
+        for entry in ("validator", "standalone"):
+            with self.subTest(entry=entry), patch.object(eval_unseen_patch, "_run_validator") as validate:
+                self.output = self.root / entry
+                if entry == "validator":
+                    code = validator_main(["-c", str(self.config), "--patch", str(self.patch_path),
+                                           "-o", str(self.output)])
+                else:
+                    code = eval_unseen_patch.main(self.args("--patch-file", str(self.patch_path)))
+                self.assertEqual(code, 30)
+                validate.assert_not_called()
+                report = json.loads((self.output / "report.json").read_text())
+                self.assertEqual(report["schema_version"], 1)
+                self.assertEqual(report["project"], "fixture")
+                self.assertEqual(report["exit_code"], 30)
+                self.assertEqual(report["security_status"], "inconclusive")
+                self.assertEqual(report["functionality_status"], "inconclusive")
+                self.assertIs(report["analysis_complete"], False)
+                self.assertEqual(report["findings"], [])
+                self.assertIn("Cannot evaluate unseen patch", report["errors"][0])
         self.assertEqual((self.repo / "target.c").read_text(), "original\n")
+
+    def test_missing_config_writes_failure_report(self):
+        self.config.unlink()
+        self.assertEqual(validator_main(["-c", str(self.config), "--patch", str(self.patch_path),
+                                        "-o", str(self.output)]), 30)
+        report = json.loads((self.output / "report.json").read_text())
+        self.assertEqual(report["exit_code"], 30)
+        self.assertIn("Cannot read configuration", report["errors"][0])
 
     def test_patched_commit_uses_verified_commit_without_rewriting_it(self):
         expected = self.git("rev-parse", "candidate").strip()
@@ -103,12 +129,40 @@ class UnseenPatchTests(unittest.TestCase):
         with patch.object(eval_unseen_patch, "_run_validator") as validate:
             self.assertEqual(eval_unseen_patch.main(self.args("--patched-commit=--help")), 30)
             validate.assert_not_called()
-        self.output.mkdir(exist_ok=True)
-        (self.output / "unseen").mkdir(exist_ok=True)
+        self.output = self.root / "previous run"
+        (self.output / "unseen").mkdir(parents=True)
         marker = self.output / "unseen" / "metadata.json"
         marker.write_text("preserve me")
-        self.assertEqual(eval_unseen_patch.main(self.args("--patched-commit", "candidate")), 30)
+        previous = self.output / "report.json"
+        previous.write_text('{"exit_code": 0}')
+        with redirect_stderr(StringIO()) as stderr:
+            self.assertEqual(eval_unseen_patch.main(self.args("--patched-commit", "candidate")), 30)
+            self.assertEqual(eval_unseen_patch.main(self.args("--patched-commit", "candidate")), 30)
         self.assertEqual(marker.read_text(), "preserve me")
+        self.assertEqual(previous.read_text(), '{"exit_code": 0}')
+        reports = list(self.output.glob("patch-failure-*/report.json"))
+        self.assertEqual(len(reports), 2)
+        for path in reports:
+            self.assertEqual(json.loads(path.read_text())["exit_code"], 30)
+            self.assertIn(str(path), stderr.getvalue())
+
+    def test_preparation_failure_preserves_report_from_regular_run(self):
+        self.output.mkdir()
+        previous = self.output / "report.json"
+        previous.write_text('{"exit_code": 0}')
+        self.patch_path.write_text("not a patch\n")
+        self.assertEqual(eval_unseen_patch.main(self.args("--patch-file", str(self.patch_path))), 30)
+        self.assertEqual(previous.read_text(), '{"exit_code": 0}')
+        report_path, = self.output.glob("patch-failure-*/report.json")
+        self.assertEqual(json.loads(report_path.read_text())["exit_code"], 30)
+
+    def test_unusable_output_preserves_exit_code_and_stderr(self):
+        self.output.write_text("existing file")
+        with redirect_stderr(StringIO()) as stderr:
+            self.assertEqual(eval_unseen_patch.main(self.args("--patch-file", str(self.patch_path))), 30)
+        self.assertIn("Cannot evaluate unseen patch", stderr.getvalue())
+        self.assertIn("Cannot write failure report", stderr.getvalue())
+        self.assertEqual(self.output.read_text(), "existing file")
 
     def test_patch_commit_is_deterministic(self):
         commits = []

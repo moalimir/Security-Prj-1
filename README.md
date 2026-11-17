@@ -90,7 +90,10 @@ Standard exits are `0` (pass), `10` (remaining/new security error), `20`
 failure), and `40` (inconclusive). A complete Linux/ELF run is required for pass.
 
 After patch preparation, pipeline reports are written to the output directory.
-Patch-preparation failures print a diagnostic and return `30`.
+Patch-preparation failures return `30`, print a diagnostic, and write
+`report.json` in a fresh output directory when writable. If an earlier run
+already owns the evidence directory or has a report, the failure is recorded
+in a separate `patch-failure-*/report.json`. The diagnostic prints the report path.
 Its `unseen/` folder retains the
 submitted patch, evaluated diff, exact commits, configs, source bundle, and
 restore/rerun commands. An existing `unseen/` folder is never overwritten.

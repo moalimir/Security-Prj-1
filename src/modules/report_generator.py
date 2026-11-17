@@ -3,8 +3,17 @@ import html
 import json
 import re
 from dataclasses import asdict, is_dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+
+
+def new_report() -> dict:
+    return {"schema_version": 1, "project": "unresolved", "exit_code": 40,
+            "security_status": "inconclusive", "functionality_status": "inconclusive",
+            "analysis_complete": False, "started_at": datetime.now(timezone.utc).isoformat(),
+            "warnings": [], "errors": [], "findings": [],
+            "builds": {}, "results": {}, "hardening": {}, "diff": {}}
 
 
 def json_default(value):
