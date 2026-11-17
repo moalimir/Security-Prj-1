@@ -22,9 +22,12 @@ def run_cmd(cmd, check=True):
     res = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
     if check and res.returncode != 0:
         print(f"ERROR (exit {res.returncode}):\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}")
+        sys.exit(1)
     return res
 
 def main():
+    run_cmd(["docker", "build", "--platform", "linux/amd64", "-t", "patch-validator",
+             "-f", "docker/Dockerfile", "."])
     base_reports = ROOT / "reports" / "container_verified"
     base_reports.mkdir(parents=True, exist_ok=True)
     
@@ -43,7 +46,10 @@ def main():
             "--network", "none", "--memory", "2g", "--cpus", "2",
             "--pids-limit", "128", "--cap-drop", "ALL",
             "--security-opt", "no-new-privileges",
+            "--user", f"{os.getuid()}:{os.getgid()}",
             "-v", f"{report_dir}:/workspace/reports:rw",
+            "-v", f"{ROOT}/tests/cjson/regression:/workspace/tests/cjson/regression:rw",
+            "-v", f"{ROOT}/tests/tlv_parser/regression:/workspace/tests/tlv_parser/regression:rw",
             "patch-validator",
             "--config", f"configs/{variant}.yaml",
             "-o", "/workspace/reports"
@@ -65,7 +71,7 @@ def main():
             sys.exit(1)
         print(res_check.stdout.strip())
         
-        # 3. If test_replay_reload (for tlv_correct)
+        # 3. Replay and reload generated cases for both correct targets.
         if test_replay_reload:
             print(f"Testing Replay for {variant} inside container...")
             replay_cmd = [
@@ -73,7 +79,10 @@ def main():
                 "--network", "none", "--memory", "2g", "--cpus", "2",
                 "--pids-limit", "128", "--cap-drop", "ALL",
                 "--security-opt", "no-new-privileges",
+                "--user", f"{os.getuid()}:{os.getgid()}",
                 "-v", f"{report_dir}:/workspace/reports:rw",
+                "-v", f"{ROOT}/tests/cjson/regression:/workspace/tests/cjson/regression:rw",
+                "-v", f"{ROOT}/tests/tlv_parser/regression:/workspace/tests/tlv_parser/regression:rw",
                 "--entrypoint", "python",
                 "patch-validator",
                 "ci/check_reports.py", "replay", "/workspace/reports"

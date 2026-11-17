@@ -12,17 +12,24 @@ The Persian assignment requires:
 """
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
-import tarfile
+import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "dist"
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
+
+from ci.check_reports import check_report
+from tools.verify_all_scenarios import SCENARIOS
+
 
 def package():
+    for variant, expected, _, warning in SCENARIOS:
+        check_report(ROOT / "reports/container_verified" / variant, expected, hardening_warning=warning)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     archive_name = "security_patch_validator_submission.zip"
     archive_path = OUTPUT_DIR / archive_name
@@ -30,15 +37,14 @@ def package():
     print(f"--> Packaging submission to {archive_path}...")
     
     # 1. Collect all git-tracked files
-    res = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True)
-    tracked_files = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+    res = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True)
+    tracked_files = [os.fsdecode(path) for path in res.stdout.split(b"\0") if path]
     
     # 2. Add extra required deliverable files (evidence & regressions)
     extra_patterns = [
         "reports/container_verified/**/*",
         "tests/cjson/regression/**/*",
         "tests/tlv_parser/regression/**/*",
-        "tools/verify_all_scenarios.py",
     ]
     
     all_files = set(tracked_files)
@@ -48,11 +54,13 @@ def package():
                 rel = str(p.relative_to(ROOT))
                 all_files.add(rel)
                 
-    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for rel in sorted(all_files):
-            file_path = ROOT / rel
-            if file_path.is_file():
+    with tempfile.TemporaryDirectory(dir=OUTPUT_DIR) as temporary:
+        staged = Path(temporary) / archive_name
+        with zipfile.ZipFile(staged, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for rel in sorted(all_files):
+                file_path = ROOT / rel
                 zipf.write(file_path, arcname=rel)
+        staged.replace(archive_path)
                 
     print(f"Packaged {len(all_files)} files into {archive_path} ({archive_path.stat().st_size // 1024} KB).")
     return archive_path
