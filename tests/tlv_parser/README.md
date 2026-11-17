@@ -10,5 +10,5 @@ must produce ASan `heap-buffer-overflow` on both exploit cases. The incomplete
 revision must still crash on the nested bypass. The regression revision must
 reject empty and 16-byte labels that the independent protocol permits.
 
-Instructor approval of this study and its reference expectations is **not recorded**.
-See the [shared approval status](../../docs/project-status.md#instructor-approval-not-recorded) for scope and required evidence.
+Instructor approval of this study and its reference expectations is confirmed by the team.
+See the [shared approval record](../../docs/project-status.md#instructor-approval-confirmed-by-the-team).

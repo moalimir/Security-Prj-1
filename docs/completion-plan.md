@@ -12,10 +12,9 @@ those were not evidence of a grade or of actual team contributions.
 2. Verify the final source revision in hosted CI. Preserve its exact commit,
    reports, generated cases, and replay artifacts. Historical Linux measurements
    are retained in [Linux verification](linux-verification.md).
-3. Record actual instructor approval of both target studies, provenance,
-   harness interfaces, independent reference tests, and expected outcomes.
-   The [approval status and review material](project-status.md#instructor-approval-not-recorded)
-   identifies the evidence needed; preparation is not approval.
+3. Retain the team's confirmation of instructor approval alongside both target
+   studies, provenance, harness interfaces, independent reference tests, and
+   expected outcomes. See the [approval record](project-status.md#instructor-approval-confirmed-by-the-team).
 4. Package tracked sources/configs with ignored reports and bundles, reconstruct
    targets offline in a fresh workspace, and verify the resulting submission.
 

@@ -32,13 +32,15 @@ Final-revision verification and submission packaging remain:
 - [x] Linux container ELF hardening evidence and detection of unintended reductions
   (static inspection and complete validator verdicts 0, 10, 20 established).
 - [ ] CI runs for the pinned real targets and retained JSON/human-readable reports.
-  [Run 43708073445](https://github.com/moalimir/Security-Prj-1/actions/runs/43708073445)
-  passed at `82e90a2`; verify later changes on the final submitted revision.
+  [Run 43740093600](https://github.com/moalimir/Security-Prj-1/actions/runs/43740093600)
+  passed at `6ac9ba2`; verify later changes on the final submitted revision.
 - [x] An independently reproducible submission containing source, configs,
   revisions, patches, tests, evidence, pipeline, and run instructions.
   Offline target reconstruction exists; `tools/package_submission.py` packages
   source, configs, tests, container-verified reports, and reproducers into
-  `dist/security_patch_validator_submission.zip`.
+  `dist/security_patch_validator_submission.zip`. Source-byte comparisons,
+  ZIP integrity, executable permissions after unzip, and offline target revision
+  reconstruction were checked on 2026-11-17. Regenerate after final updates.
 - [x] Evaluation on unseen patches without hardcoding patch names or identifiers.
   Both CLI entry points have unmocked integration coverage for all five exits,
   line insertions, caller changes, mixed findings, and argument inputs. Harmless

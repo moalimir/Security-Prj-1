@@ -29,6 +29,13 @@ The measured native target results are in
 Team members, equal responsibility shares, contribution evidence, and individual
 defense requirements are recorded in [Team contributions](docs/team-contributions.md).
 
+To rebuild the validator image and check all seven target scenarios, run
+`python tools/verify_all_scenarios.py`. After successful verification,
+`python tools/package_submission.py` validates the saved reports and creates
+`dist/security_patch_validator_submission.zip`. Extract it with `unzip` to
+preserve executable permissions on bundled binaries. Dependency versions are
+recorded in `uv.lock` for installation with `uv sync --locked`.
+
 ## Install and run the local fixture
 
 Requires Python **3.12+**, Git, and Clang or GCC with ASan/UBSan. The full course

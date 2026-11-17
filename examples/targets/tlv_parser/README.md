@@ -55,5 +55,5 @@ Build directly with `make -C examples/targets/tlv_parser/base release` or
 sanitized builds enable ASan/UBSan and preserve source-symbolized stacks.
 Run `python -m unittest tests.test_tlv_target -v` for the focused checks.
 
-Instructor approval of this study and its reference expectations is **not recorded**.
-See the [shared approval status](../../../docs/project-status.md#instructor-approval-not-recorded) for scope and required evidence.
+Instructor approval of this study and its reference expectations is confirmed by the team.
+See the [shared approval record](../../../docs/project-status.md#instructor-approval-confirmed-by-the-team).

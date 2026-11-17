@@ -14,12 +14,13 @@ as recorded below. Individual defense remains separately assessed.
 | New errors | Valid/boundary/invalid discoveries retain their original oracle during reduction and reload (`5cc7a15`) | Unstable discoveries retain bundles without publishing a regression. |
 | Unseen patches | Eight real CLI integration tests cover exits 0/10/20/30/40, insertions, callers, mixed findings, and literal/empty arguments (`c95d581`) | Harmless compiled fixtures print synthetic diagnostics; these checks do not validate ASan itself or every unseen patch. |
 | JSON contract | Independent security/functionality statuses and an always-present completion boolean (`05a8e9f`) | Conclusions apply to configured tests; incomplete checks cannot establish a full pass. |
-| Current framework checks | 64 native framework tests and 16 Linux status/integration tests pass | Full real-target sanitizer scenarios have not been rerun for these revisions. |
+| Current framework checks | 76 focused native and restricted Linux x86_64 tests pass, including submission-tool regressions | Synthetic diagnostic fixtures verify infrastructure behavior; the final hosted scenario run remains to verify. |
+| Submission archive | All tracked files match the ZIP, including the Persian brief; standard unzip preserves binary permissions and offline preparation restores the pinned revisions | Retain the final revision's hosted reports and regenerate the archive after source or evidence updates. |
 
 The local verification commands are:
 
 ```sh
-python -m unittest tests.test_analysis tests.test_build_and_diff tests.test_foundation tests.test_regressions tests.test_reports tests.test_report_statuses tests.test_unseen_patch tests.test_unseen_patch_integration -q
+python -m unittest tests.test_analysis tests.test_build_and_diff tests.test_foundation tests.test_regressions tests.test_reports tests.test_report_statuses tests.test_unseen_patch tests.test_unseen_patch_integration tests.test_submission_tools -q
 # Inside the Linux image, with the current checkout mounted at /workspace:
 python -m unittest tests.test_report_statuses tests.test_unseen_patch_integration -q
 ```
@@ -34,8 +35,8 @@ README still lacks Linux results are superseded by the current JSON contract and
 this status record. They are not included in the pushed source documentation.
 
 The latest hosted success verified before this documentation update was
-[run 43708073445](https://github.com/moalimir/Security-Prj-1/actions/runs/43708073445)
-at `82e90a2e696bbadfc83dfcdee80e63d746dd005e`. A successful run on an earlier
+[run 43740093600](https://github.com/moalimir/Security-Prj-1/actions/runs/43740093600)
+at `6ac9ba23950c64708daeb068cf57b006817c9f42`. A successful run on an earlier
 commit does not establish the result of the revision now being pushed. Check the
 new run in GitHub Actions and retain its exact commit and artifacts.
 
@@ -69,8 +70,8 @@ completed individual defense.
 - Verify the final commit in hosted CI and retain reports and reproducer artifacts.
 - Verify real-target patch-file evaluation on the final revision; the compiled
   synthetic fixtures establish infrastructure behavior within their stated scope.
-- Assemble and independently check a submission archive containing the tracked
-  sources plus the otherwise ignored reports, bundles, and reviewed regressions.
+- Regenerate the verified submission archive after final source or evidence
+  updates using `python tools/package_submission.py`.
 
 No full-grade percentage is asserted: implemented capability, measured evidence,
 formal approval, and submission packaging are separate requirements.
