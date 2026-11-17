@@ -28,7 +28,11 @@ def check_report(directory, expected, regression_loaded=False, hardening_warning
         assert report["builds"][label]["success"], label
         assert report["results"][label], label
     for side in ("base", "patched"):
-        assert report["hardening"][side]["status"] == "checked", report["hardening"]
+        hardening = report["hardening"][side]
+        assert hardening["status"] == "checked", hardening
+        assert hardening.get("relro") in ("none", "partial", "full"), hardening
+        for protection in ("nx", "pie", "canary"):
+            assert isinstance(hardening.get(protection), bool), (protection, hardening)
     assert report["findings"], "No findings recorded"
     for finding in report["findings"]:
         for label in BUILDS:

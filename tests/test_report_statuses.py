@@ -97,7 +97,8 @@ class ReportStatusTests(unittest.TestCase):
                 "analysis_complete": True, "errors": [], "warnings": [],
                 "builds": {label: {"success": True} for label in BUILDS},
                 "results": {label: {"fixture": [{"exit_code": 0}]} for label in BUILDS},
-                "hardening": {side: {"status": "checked"} for side in ("base", "patched")},
+                "hardening": {side: {"status": "checked", "relro": "full", "nx": True,
+                                     "pie": True, "canary": True} for side in ("base", "patched")},
                 "findings": [{"correlation": {label: {"status": "unknown", "evidence": []}
                                               for label in BUILDS}}],
             }
@@ -107,6 +108,13 @@ class ReportStatusTests(unittest.TestCase):
                                  ("analysis_complete", False), ("analysis_complete", "false")):
                 with self.subTest(field=field, value=value):
                     path.write_text(json.dumps({**report, field: value}))
+                    with self.assertRaises(AssertionError):
+                        check_report(directory, 0)
+            for field in ("relro", "nx", "pie", "canary"):
+                with self.subTest(unknown_hardening=field):
+                    hardening = {**report["hardening"],
+                                 "patched": {**report["hardening"]["patched"], field: None}}
+                    path.write_text(json.dumps({**report, "hardening": hardening}))
                     with self.assertRaises(AssertionError):
                         check_report(directory, 0)
             correlation = report["findings"][0]["correlation"]

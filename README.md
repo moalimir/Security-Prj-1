@@ -264,7 +264,9 @@ Later stack sequences whose frame numbers restart are labeled `auxiliary`
 Caller effects and unsymbolized paths may remain unknown. ELF
 hardening records RELRO level, NX, PIE, canary and Fortify symbol evidence, and
 warns on reductions. PIE does not prove runtime ASLR; symbols do not prove that
-every function is protected.
+every function is protected. Missing `PT_GNU_STACK` leaves NX unknown and marks
+hardening `inconclusive`, so `analysis_complete` is false and a complete PASS
+cannot be returned. Known protection reductions still produce warnings.
 
 ## Reports, replay, and regression inputs
 

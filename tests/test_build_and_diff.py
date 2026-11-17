@@ -187,6 +187,17 @@ class BuildTests(unittest.TestCase):
             weakened = {**checked, "nx": False, "pie": False, "relro": "none"}
             warnings = HardeningChecker.compare(checked, weakened)
             self.assertEqual(len(warnings), 3)
+            path.write_bytes(ident + header + program(0x6474e552, 4) + program(1, 6) + program(3, 4))
+            unknown = HardeningChecker().check(path)
+            self.assertEqual(unknown["status"], "inconclusive")
+            self.assertIsNone(unknown["nx"])
+            self.assertIn("PT_GNU_STACK flags: missing", unknown["evidence"])
+            warnings = HardeningChecker.compare(checked, {**unknown, "pie": False, "relro": "none"})
+            self.assertEqual(len(warnings), 3)
+            self.assertTrue(any("could not be checked" in warning for warning in warnings))
+            self.assertTrue(any("pie" in warning for warning in warnings))
+            self.assertTrue(any("RELRO" in warning for warning in warnings))
+            self.assertFalse(any("decreased: nx" in warning for warning in warnings))
 
 
 if __name__ == "__main__":

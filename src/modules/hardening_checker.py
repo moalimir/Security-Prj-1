@@ -34,7 +34,8 @@ class HardeningChecker:
                 pie = elf.header.e_type == "ET_DYN" and (
                     any(s.header.p_type == "PT_INTERP" for s in segments)
                     or any(t.entry.d_tag == "DT_FLAGS_1" and t.entry.d_val & 0x08000000 for t in dynamic_tags))
-                result.update(status="checked", relro="full" if has_relro and bind_now else "partial" if has_relro else "none",
+                result.update(status="checked" if stack else "inconclusive",
+                              relro="full" if has_relro and bind_now else "partial" if has_relro else "none",
                               nx=not bool(stack.header.p_flags & 1) if stack else None,
                               pie=bool(pie), canary="__stack_chk_fail" in symbols,
                               fortify=any(name.startswith("__") and name.endswith("_chk")
@@ -52,11 +53,12 @@ class HardeningChecker:
     def compare(base: dict, patched: dict) -> list[str]:
         warnings = []
         if base["status"] != "checked" or patched["status"] != "checked":
-            return ["ELF hardening could not be checked for both release binaries."]
+            warnings.append("ELF hardening could not be checked for both release binaries.")
         for key in ("nx", "pie", "canary", "fortify"):
-            if base[key] is True and patched[key] is not True:
+            if base[key] is True and patched[key] is False:
                 warnings.append(f"Hardening decreased: {key} ({base[key]} -> {patched[key]}).")
         ranks = {"none": 0, "partial": 1, "full": 2}
-        if ranks[patched["relro"]] < ranks[base["relro"]]:
+        if (base["relro"] in ranks and patched["relro"] in ranks
+                and ranks[patched["relro"]] < ranks[base["relro"]]):
             warnings.append(f"Hardening decreased: RELRO ({base['relro']} -> {patched['relro']}).")
         return warnings
