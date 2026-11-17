@@ -362,9 +362,10 @@ passes. No finite passing suite proves the absence of every vulnerability.
 
 The active workflow is [`.github/workflows/validate.yml`](.github/workflows/validate.yml),
 in the [GitHub workflow discovery location](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows).
-It runs tests and checks all three demo verdicts in a resource-limited Linux
-container, uploading evidence even on failure. Real target templates are not
-presented as passing CI jobs.
+It runs the full test suite, all three demo verdicts, and all seven target
+scenarios in resource-limited Linux containers, uploading evidence even on
+failure. Test discovery uses the image's non-root user and has network access
+disabled.
 
 ## Code layout
 

@@ -1,6 +1,6 @@
-The workflow in `.github/workflows/validate.yml` runs unit discovery, builds a
-Linux `amd64` image, and validates the three demo variants plus these target
-scenarios:
+The workflow in `.github/workflows/validate.yml` builds a Linux `amd64` image,
+runs the full test suite inside it, and validates the three demo variants plus
+these target scenarios:
 
 | Configuration | Expected validator exit |
 | --- | ---: |
@@ -15,6 +15,9 @@ scenarios:
 Every target container uses `--platform linux/amd64 --network none --memory 2g
 --cpus 2 --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges`, with
 its report directory and the two target regression corpora bind mounted writable.
+Test discovery uses the same restrictions and the image's non-root `validator`
+user. Tests use the image's sources and dependencies with no host bind mounts.
+The Actions runner executes the standard-library report checks.
 Runtime needs no downloads:
 the image prepares both target Git repositories during the build. Hardening and
 minimization are enabled. Report directories are uploaded even after a failed

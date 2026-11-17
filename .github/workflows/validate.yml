@@ -11,9 +11,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-      - run: pip install -e .
-      - run: python -m unittest discover -s tests -v
       - name: Restore generated target regressions
         id: regressions
         uses: actions/cache/restore@v4
@@ -25,6 +22,11 @@ jobs:
           restore-keys: target-regressions-${{ runner.os }}-
       - name: Build Linux x86_64 validator
         run: docker build --platform linux/amd64 -t patch-validator -f docker/Dockerfile .
+      - name: Run test suite in restricted Linux container
+        run: |
+          docker run --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
+            --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
+            --entrypoint python patch-validator -m unittest discover -s tests -v
       - name: Check demo container verdicts
         shell: bash
         run: |
