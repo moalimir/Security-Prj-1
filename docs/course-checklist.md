@@ -4,15 +4,20 @@ See [Project status](project-status.md) for current evidence and the approval re
 Checked items below describe implemented capabilities or dated evidence, not full-grade certification.
 
 The target source/revision work and saved Linux scenarios are implemented.
-Instructor approval, final-revision verification, and submission packaging remain:
+Instructor approval and the contribution statement are confirmed by the team.
+Final-revision verification and submission packaging remain:
 
+- [x] Team-confirmed contribution statement for all four members, with equal 25%
+  shares and subsystem responsibilities, recorded in
+  [Team contributions](team-contributions.md). Include it in the submission;
+  individual participation and understanding are assessed during defense.
 - [x] Two independent C/C++ target programs running as Linux x86_64 ELF binaries,
   including at least one real non-toy project/library. Source preparation is
   complete: real cJSON 1.7.17 and the independent original TLV program. ELF
   builds and patched release/sanitizer functional executions are measured using
   the guarded Rosetta memory policy. See [Linux evidence](linux-verification.md).
-- [ ] Instructor approval recorded for targets, source provenance, patch provenance, harness
-  interfaces, independent reference tests, and expected outcomes.
+- [x] Instructor approval complete, as confirmed by the team on 2026-11-17;
+  see the [approval record](project-status.md#instructor-approval-confirmed-by-the-team).
 - [x] For **each target**, exact vulnerable, correct, incomplete, and functional
   regression revisions, with drivers present in the selected revisions.
 - [x] A documented original memory-error PoC and a distinct input demonstrating

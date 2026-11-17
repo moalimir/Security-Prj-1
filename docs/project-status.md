@@ -1,8 +1,9 @@
-# Project status — 2026-11-15
+# Project status — 2026-11-17
 
 This is the current status record. Dated verification documents describe their
 recorded runs; they do not certify later commits or instructor approval.
-Team contribution and individual defense are outside this technical assessment.
+Instructor approval and the contribution statement are confirmed by the team
+as recorded below. Individual defense remains separately assessed.
 
 ## Implementation and current verification
 
@@ -38,14 +39,14 @@ at `82e90a2e696bbadfc83dfcdee80e63d746dd005e`. A successful run on an earlier
 commit does not establish the result of the revision now being pushed. Check the
 new run in GitHub Actions and retain its exact commit and artifacts.
 
-## Instructor approval: not recorded
+## Instructor approval: confirmed by the team
 
-No instructor decision or approval evidence is recorded in the tracked repository.
-Source preparation, provenance checks, passing tests, and this status update do
-not grant course approval. This applies to **both** targets, their source/patch
-provenance, harness interfaces, independent oracles, and expected outcomes.
+On 2026-11-17, the team representative confirmed in the project chat that
+instructor approval of targets, provenance, and independent oracles is complete.
+This records the team's confirmation; the confirmation date is not asserted to
+be the date of the instructor's decision.
 
-The approval material is available for review:
+The associated project material is:
 
 - cJSON: [source and patch provenance](../examples/targets/cjson/provenance.json),
   [study contract](../examples/targets/cjson/README.md),
@@ -55,17 +56,19 @@ The approval material is available for review:
 - Both: [exact generated revisions](target-revisions.json),
   [build/input configurations](../configs/), and [assignment](../project1.txt).
 
-To record approval, retain the actual decision, date, reviewer, approved scope,
-and a durable evidence reference. Identify any requested changes and pin the
-approved target revisions and oracle versions. Until that evidence exists, keep
-this status as **not recorded**. No approval request has been sent by this update.
+## Team contribution statement
+
+On 2026-11-17, the team representative confirmed the added
+[contribution statement](team-contributions.md) as the team's contribution record.
+It records four equal 25% shares and each member's technical scope. This is a
+team declaration; it does not assert independently audited authorship or a
+completed individual defense.
 
 ## Remaining technical/submission work
 
 - Verify the final commit in hosted CI and retain reports and reproducer artifacts.
 - Verify real-target patch-file evaluation on the final revision; the compiled
   synthetic fixtures establish infrastructure behavior within their stated scope.
-- Record the instructor's actual decision for the materials above.
 - Assemble and independently check a submission archive containing the tracked
   sources plus the otherwise ignored reports, bundles, and reviewed regressions.
 

@@ -16,15 +16,18 @@ program. Run `python tools/prepare_targets.py` once to prepare both offline.
 Native tests exercise the security and regression behavior. Complete Linux
 x86_64 validator evidence across all seven target scenarios (verdicts 0, 10, 20),
 including ELF hardening inspection, recorded 3-run replays, and regression
-reloads, is saved under `reports/container_verified/`. Instructor approval and
-CI verification of the final source revision remain outstanding. The authoritative
+reloads, is saved under `reports/container_verified/`. The team confirms instructor
+approval is complete; CI verification of the final source revision remains outstanding. The authoritative
 [project status](docs/project-status.md) distinguishes implementation, current
-checks, historical evidence, and approval that is not recorded.
+checks, historical evidence, and team-confirmed approval.
 The guarded Rosetta compatibility fix and full container measurements are recorded
 in [`docs/linux-verification.md`](docs/linux-verification.md). See
 [`docs/course-checklist.md`](docs/course-checklist.md).
 The measured native target results are in
 [`docs/target-verification.md`](docs/target-verification.md).
+
+Team members, equal responsibility shares, contribution evidence, and individual
+defense requirements are recorded in [Team contributions](docs/team-contributions.md).
 
 ## Install and run the local fixture
 
