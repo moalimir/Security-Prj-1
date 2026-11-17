@@ -119,7 +119,7 @@ The course requires x86_64; use the explicit platform on ARM hosts.
 ```sh
 docker build --platform linux/amd64 -t patch-validator -f docker/Dockerfile .
 mkdir -p reports/container
-docker run --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
+docker run --init --rm --platform linux/amd64 --network none --memory 2g --cpus 2 \
   --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges \
   --user "$(id -u):$(id -g)" \
   -v "$PWD/reports/container:/workspace/reports:rw" \

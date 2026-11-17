@@ -1,6 +1,7 @@
 services:
   patch-validator:
     platform: linux/amd64
+    init: true
     build:
       context: ..
       dockerfile: docker/Dockerfile

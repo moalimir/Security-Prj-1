@@ -12,12 +12,14 @@ these target scenarios:
 | `tlv_regression` | 20 |
 | `tlv_hardening_warn` | 0, with canary and RELRO degradation warnings |
 
-Every target container uses `--platform linux/amd64 --network none --memory 2g
+Every target container uses `--init --platform linux/amd64 --network none --memory 2g
 --cpus 2 --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges`, with
 its report directory and the two target regression corpora bind mounted writable.
 Test discovery uses the same restrictions and the image's non-root `validator`
 user. Tests use the image's sources and dependencies with no host bind mounts.
 The Actions runner executes the standard-library report checks.
+Docker's init process reaps orphaned subprocesses so repeated test executions
+can finish within the configured process limit.
 Runtime needs no downloads:
 the image prepares both target Git repositories during the build. Hardening and
 minimization are enabled. Report directories are uploaded even after a failed

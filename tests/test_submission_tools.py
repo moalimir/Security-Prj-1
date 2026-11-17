@@ -80,6 +80,7 @@ class SubmissionToolsTests(unittest.TestCase):
         containers = [command for command in commands if command[:2] == ["docker", "run"]]
         self.assertEqual(len(containers), 11)
         for command in containers:
+            self.assertIn("--init", command)
             self.assertIn(f"{self.root}/tests/cjson/regression:/workspace/tests/cjson/regression:rw", command)
             self.assertIn(f"{self.root}/tests/tlv_parser/regression:/workspace/tests/tlv_parser/regression:rw", command)
 

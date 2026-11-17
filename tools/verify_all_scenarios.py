@@ -42,7 +42,7 @@ def main():
         
         # 1. Run container validator
         docker_cmd = [
-            "docker", "run", "--rm", "--platform", "linux/amd64",
+            "docker", "run", "--init", "--rm", "--platform", "linux/amd64",
             "--network", "none", "--memory", "2g", "--cpus", "2",
             "--pids-limit", "128", "--cap-drop", "ALL",
             "--security-opt", "no-new-privileges",
@@ -75,7 +75,7 @@ def main():
         if test_replay_reload:
             print(f"Testing Replay for {variant} inside container...")
             replay_cmd = [
-                "docker", "run", "--rm", "--platform", "linux/amd64",
+                "docker", "run", "--init", "--rm", "--platform", "linux/amd64",
                 "--network", "none", "--memory", "2g", "--cpus", "2",
                 "--pids-limit", "128", "--cap-drop", "ALL",
                 "--security-opt", "no-new-privileges",
