@@ -212,8 +212,9 @@ so both builds use recorded sources.
 
 A complete suite must cover `valid`, `boundary`, `invalid`, and `exploit` inputs.
 Each case needs a unique filename-safe `name`, `category`, `input_file`, and
-`expected_exit_code` for the patched outcome. Functional/boundary cases also need
-independent `expected_stdout` or a real SHA-256 `expected_stdout_hash`.
+`expected_exit_code` for the patched outcome. Valid, boundary, and invalid cases
+also need independent `expected_stdout` or a real SHA-256 `expected_stdout_hash`.
+Use `expected_stdout: ""` when no output is expected.
 `expected_error_type` is required for exploits, for example
 `heap-buffer-overflow`. Signal-only stops remain inconclusive until corroborated
 by classified error evidence. Expected patched outcomes must not crash.

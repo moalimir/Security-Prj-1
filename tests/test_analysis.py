@@ -101,6 +101,28 @@ class AnalysisTests(unittest.TestCase):
             with self.assertRaises(ConfigError):
                 load_oracle(manifest)
 
+    def test_invalid_oracle_requires_output_expectation(self):
+        from src.core.oracle import load_oracle
+        from src.modules.classifier import matches_oracle
+        from src.utils.exceptions import ConfigError
+        empty_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "input").write_text("ordinary invalid record\n")
+            manifest = root / "oracle.json"
+            for expectation in ({}, {"expected_stdout": ""}, {"expected_stdout_hash": empty_hash}):
+                with self.subTest(expectation=expectation):
+                    case = {"name": "invalid", "category": "invalid", "input_file": "input",
+                            "expected_exit_code": 1, **expectation}
+                    manifest.write_text(json.dumps({"test_cases": [case]}))
+                    if not expectation:
+                        with self.assertRaises(ConfigError):
+                            load_oracle(manifest)
+                        continue
+                    loaded, = load_oracle(manifest)
+                    self.assertTrue(matches_oracle(self.result(exit_code=1, stdout="", stdout_hash=empty_hash), loaded))
+                    self.assertFalse(matches_oracle(self.result(exit_code=1, stdout="unexpected\n"), loaded))
+
     def test_report_escapes_untrusted_output(self):
         from src.modules.report_generator import ReportGenerator
         with tempfile.TemporaryDirectory() as tmp:

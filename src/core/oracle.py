@@ -33,7 +33,7 @@ def load_oracle(path: Path) -> list[dict]:
             raise ConfigError(f"{name} requires a real SHA-256 output hash; placeholders are not oracles.")
         if "expected_stdout" in case and not isinstance(case["expected_stdout"], str):
             raise ConfigError(f"expected_stdout must be a string for {name}.")
-        if case["category"] in ("valid", "boundary") and digest is None and "expected_stdout" not in case:
+        if case["category"] in ("valid", "boundary", "invalid") and digest is None and "expected_stdout" not in case:
             raise ConfigError(f"{name} requires independent expected_stdout or expected_stdout_hash.")
         if case["category"] == "exploit" and not isinstance(case.get("expected_error_type"), str):
             raise ConfigError(f"{name} requires the baseline expected_error_type.")
