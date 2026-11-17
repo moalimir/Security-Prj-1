@@ -18,7 +18,10 @@ def check_report(directory, expected, regression_loaded=False, hardening_warning
     report = read_json(directory / "report.json")
     assert report["exit_code"] == expected, (directory, report["exit_code"], expected)
     assert not report["errors"], report["errors"]
-    assert report["analysis_complete"], report["warnings"]
+    assert report["analysis_complete"] is True, report["warnings"]
+    if expected == 0:
+        for status in ("security_status", "functionality_status"):
+            assert report.get(status) == "pass", (status, report.get(status))
     for name in ("report.md", "report.html", "patch.diff"):
         assert (directory / name).is_file(), directory / name
     for label in BUILDS:

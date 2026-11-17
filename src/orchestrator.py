@@ -71,6 +71,12 @@ class PatchValidator:
         self.report.update(aggregate_statuses(self.cases, self.findings, self.runs))
         if self.report["errors"]:
             self.report["analysis_complete"] = False
+        if self.report["exit_code"] == 0 and not (
+            self.report["analysis_complete"] is True
+            and self.report["security_status"] == "pass"
+            and self.report["functionality_status"] == "pass"
+        ):
+            self.report["exit_code"] = 40
         self.report["finished_at"] = datetime.now(timezone.utc).isoformat()
         try:
             ReportGenerator(self.workspace).generate(self.report)
@@ -175,9 +181,8 @@ class PatchValidator:
             self.report["warnings"].append("Input minimization was explicitly skipped; original reproducers are still saved.")
         for case, finding in zip(self.cases, self.findings):
             self._bundle(case, finding)
-        code = determine_exit_code(self.findings)
         self.report["analysis_complete"] = not (hardening_inconclusive or self.analysis_incomplete)
-        self.report["exit_code"] = 40 if code == 0 and not self.report["analysis_complete"] else code
+        self.report["exit_code"] = determine_exit_code(self.findings)
 
     @staticmethod
     def _stable(results: list[TestResult]) -> bool:

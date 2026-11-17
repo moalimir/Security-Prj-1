@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from ci.check_reports import BUILDS, check_report
 from src.core.test_runner import TestResult
 from src.modules.classifier import Finding
 from src.orchestrator import PatchValidator
@@ -53,6 +54,60 @@ class ReportStatusTests(unittest.TestCase):
             self.assertEqual(report["security_status"], "inconclusive")
             self.assertEqual(report["functionality_status"], "inconclusive")
             self.assertIs(report["analysis_complete"], False)
+
+    def test_exit_zero_requires_both_statuses_to_pass_and_complete_analysis(self):
+        for security, functionality, complete, expected in (
+                ("pass", "pass", True, 0),
+                ("inconclusive", "pass", True, 40),
+                ("pass", "inconclusive", True, 40),
+                ("pass", "pass", False, 40)):
+            with self.subTest(security=security, functionality=functionality, complete=complete), \
+                    tempfile.TemporaryDirectory() as temporary:
+                validator = PatchValidator("unused", temporary)
+
+                def run_fixture():
+                    self.evidence(validator, functionality="Fixed" if functionality == "pass" else "Inconclusive")
+                    if security == "inconclusive":
+                        result = validator.runs["base_release"]["exploit"][0]
+                        result.exit_code, result.signal = -6, "SIGABRT"
+                        result.error_type, result.detection_mechanism = "crash-SIGABRT", "signal"
+                        validator.findings[0].comparisons["release"]["category"] = "Inconclusive"
+                    if functionality == "inconclusive":
+                        for mode in ("release", "sanitized"):
+                            validator.runs[f"base_{mode}"]["valid"][0].stdout = "unexpected\n"
+                    validator.report.update(exit_code=0, analysis_complete=complete)
+
+                with patch.object(validator, "_run_pipeline", side_effect=run_fixture):
+                    actual = validator.run()
+                report = json.loads((validator.workspace / "report.json").read_text())
+                self.assertEqual(actual, expected)
+                self.assertEqual(report["exit_code"], expected)
+                self.assertEqual(report["security_status"], security)
+                self.assertEqual(report["functionality_status"], functionality)
+                self.assertIs(report["analysis_complete"], complete)
+
+    def test_ci_rejects_exit_zero_without_both_pass_statuses_and_complete_analysis(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            for name in ("report.md", "report.html", "patch.diff"):
+                (directory / name).touch()
+            path = directory / "report.json"
+            report = {
+                "exit_code": 0, "security_status": "pass", "functionality_status": "pass",
+                "analysis_complete": True, "errors": [], "warnings": [],
+                "builds": {label: {"success": True} for label in BUILDS},
+                "results": {label: {"fixture": [{"exit_code": 0}]} for label in BUILDS},
+                "hardening": {side: {"status": "checked"} for side in ("base", "patched")},
+                "findings": [{"correlation": {"base_sanitized": {"status": "changed_line"}}}],
+            }
+            path.write_text(json.dumps(report))
+            check_report(directory, 0)
+            for field, value in (("security_status", "inconclusive"), ("functionality_status", "fail"),
+                                 ("analysis_complete", False), ("analysis_complete", "false")):
+                with self.subTest(field=field, value=value):
+                    path.write_text(json.dumps({**report, field: value}))
+                    with self.assertRaises(AssertionError):
+                        check_report(directory, 0)
 
     def test_late_failures_keep_confirmed_independent_findings(self):
         for failure, expected_exit in ((AnalysisError("late analysis failure"), 10),
