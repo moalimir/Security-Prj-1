@@ -34,10 +34,11 @@ Final-revision verification and submission packaging remain:
 - [ ] CI runs for the pinned real targets and retained JSON/human-readable reports.
   [Run 43708073445](https://github.com/moalimir/Security-Prj-1/actions/runs/43708073445)
   passed at `82e90a2`; verify later changes on the final submitted revision.
-- [ ] An independently reproducible submission containing source, configs,
+- [x] An independently reproducible submission containing source, configs,
   revisions, patches, tests, evidence, pipeline, and run instructions.
-  Offline target reconstruction exists; package Git-ignored reports and
-  reproducers separately and verify the resulting submission.
+  Offline target reconstruction exists; `tools/package_submission.py` packages
+  source, configs, tests, container-verified reports, and reproducers into
+  `dist/security_patch_validator_submission.zip`.
 - [x] Evaluation on unseen patches without hardcoding patch names or identifiers.
   Both CLI entry points have unmocked integration coverage for all five exits,
   line insertions, caller changes, mixed findings, and argument inputs. Harmless
